@@ -4782,6 +4782,12 @@ $as_echo "#define XTENSA 1" >>confdefs.h
 
 	;;
 
+riscv*)
+	arch=riscv
+
+$as_echo "#define RISCV 1" >>confdefs.h
+
+	;;
 *)
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: NO!" >&5
 $as_echo "NO!" >&6; }
