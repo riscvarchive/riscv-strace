@@ -996,6 +996,9 @@ sys_sigreturn(struct tcb *tcp)
 	/* no need to remind */
 #elif defined(XTENSA)
 	/* Xtensa only has rt_sys_sigreturn */
+#elif defined(RISCV)
+        /* FIXME: RISCV: I think this is true? */
+        /* RISC-V only has rt_sys_sigreturn */
 #else
 # warning No sys_sigreturn() for this architecture
 # warning         (no problem, just a reminder :-)

@@ -515,7 +515,7 @@ extern void print_ldt_entry();
 # define ARG_CTID	3
 # define ARG_TLS	4
 #elif defined X86_64 || defined X32 || defined ALPHA || defined TILE \
-   || defined OR1K
+   || defined OR1K || defined RISCV
 # define ARG_FLAGS	0
 # define ARG_STACK	1
 # define ARG_PTID	2
@@ -1503,6 +1503,10 @@ const struct xlat struct_user_offsets[] = {
 	{ PT_CR_11,		"cr11"					},
 	{ PT_IEEE_IP,		"ieee_exception_ip"			},
 #elif defined(SPARC)
+	/* XXX No support for these offsets yet. */
+#elif defined(RISCV)
+        /* FIXME: RISCV: Figure these out, maybe they're just a
+         * ucontext offset?  I certainly hope so... */
 	/* XXX No support for these offsets yet. */
 #elif defined(HPPA)
 	/* XXX No support for these offsets yet. */
@@ -2501,6 +2505,9 @@ const struct xlat struct_user_offsets[] = {
 	/* nothing */
 #elif defined(XTENSA)
 	/* nothing */
+#elif defined(RISCV)
+        /* FIXME: RISCV: Is there really nothing here? */
+        /* nothing */
 #endif
 	{ 0,			NULL					},
 };

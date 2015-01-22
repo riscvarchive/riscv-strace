@@ -1404,6 +1404,9 @@ change_syscall(struct tcb *tcp, arg_setup_state *state, int new)
 #elif defined(XTENSA)
 	/* setbpt/clearbpt never used: */
 	/* Xtensa is only supported since linux 2.6.13 */
+#elif defined(RISCV)
+	/* setbpt/clearbpt never used: */
+	/* RISC-V CPUs are only supported since about linux-3.14 */
 #else
 #warning Do not know how to handle change_syscall for this architecture
 #endif /* architecture */

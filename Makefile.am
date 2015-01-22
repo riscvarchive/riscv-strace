@@ -127,6 +127,12 @@ EXTRA_DIST =				\
 	linux/powerpc/signalent1.h	\
 	linux/powerpc/syscallent.h	\
 	linux/powerpc/syscallent1.h	\
+	linux/riscv/errnoent1.h		\
+	linux/riscv/ioctlent.h.in	\
+	linux/riscv/ioctlent1.h		\
+	linux/riscv/signalent1.h	\
+	linux/riscv/syscallent.h	\
+	linux/riscv/syscallent1.h	\
 	linux/s390/ioctlent.h.in	\
 	linux/s390/syscallent.h		\
 	linux/s390x/ioctlent.h.in	\

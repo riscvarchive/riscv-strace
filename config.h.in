@@ -451,6 +451,9 @@
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
 
+/* Define for the RISC-V architecture */
+#undef RISCV
+
 /* Define for the S390 architecture. */
 #undef S390
 

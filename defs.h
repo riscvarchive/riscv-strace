@@ -153,6 +153,7 @@ extern char *stpcpy(char *dst, const char *src);
     || defined(AVR32) \
     || defined(OR1K) \
     || defined(METAG) \
+    || defined(RISCV) \
     || defined(TILE) \
     || defined(XTENSA) \
     ) && defined(__GLIBC__)
@@ -592,6 +593,7 @@ extern void call_summary(FILE *);
  || defined(X86_64) || defined(X32) \
  || defined(AARCH64) \
  || defined(ARM) \
+ || defined(RISCV) \
  || defined(SPARC) || defined(SPARC64) \
  || defined(TILE) \
  || defined(OR1K) \
