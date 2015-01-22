@@ -81,6 +81,10 @@
 # include <asm/ptrace.h>
 #endif
 
+#if defined(RISCV)
+# include <asm/ptrace.h>
+#endif
+
 #ifndef NSIG
 # warning: NSIG is not defined, using 32
 # define NSIG 32
@@ -782,6 +786,9 @@ static long xtensa_a2;
 # elif defined(ARC)
 static struct user_regs_struct arc_regs;
 # define ARCH_REGS_FOR_GETREGSET arc_regs
+#elif defined(RISCV)
+#define ARCH_REGS_FOR_GETREGSET riscv_regs
+static struct user_regs_struct riscv_regs;
 #endif
 
 void
@@ -924,6 +931,12 @@ print_pc(struct tcb *tcp)
 	tprintf("[%08lx] ", pc);
 #elif defined(ARC)
 	tprintf("[%08lx] ", arc_regs.efa);
+#elif defined(RISCV)
+# ifdef _LP64
+        tprintf("[%016lx] ", riscv_regs.pc);
+# else
+        tprintf("[%08lx] ",  riscv_regs.pc);
+# endif
 #endif /* architecture */
 }
 
@@ -1021,6 +1034,7 @@ static void get_regset(pid_t pid)
   || defined(METAG) \
   || defined(OR1K) \
   || defined(ARC)
+  || defined(RISCV)
 	static struct iovec io = {
 		.iov_base = &ARCH_REGS_FOR_GETREGSET,
 		.iov_len = sizeof(ARCH_REGS_FOR_GETREGSET)
@@ -1046,7 +1060,7 @@ void
 get_regs(pid_t pid)
 {
 /* PTRACE_GETREGSET only */
-# if defined(METAG) || defined(OR1K) || defined(X32) || defined(AARCH64) || defined(ARC)
+# if defined(METAG) || defined(OR1K) || defined(X32) || defined(AARCH64) || defined(ARC) || defined (RISCV)
 	get_regset(pid);
 
 /* PTRACE_GETREGS only */
@@ -1556,6 +1570,8 @@ get_scno(struct tcb *tcp)
 		return -1;
 # elif defined(ARC)
 	scno = arc_regs.scratch.r8;
+#elif defined(RISCV)
+        scno = riscv_regs.a7;
 #endif
 
 	tcp->scno = scno;
@@ -1950,6 +1966,13 @@ get_syscall_args(struct tcb *tcp)
 	for (i = 0; i < nargs; ++i)
 		tcp->u_arg[i] = *arc_args--;
 
+#elif defined(RISCV)
+        tcp->u_arg[0] = riscv_regs.a0;
+        tcp->u_arg[1] = riscv_regs.a1;
+        tcp->u_arg[2] = riscv_regs.a2;
+        tcp->u_arg[3] = riscv_regs.a3;
+        tcp->u_arg[4] = riscv_regs.a4;
+        tcp->u_arg[5] = riscv_regs.a5;
 #else /* Other architecture (32bits specific) */
 	for (i = 0; i < nargs; ++i)
 		if (upeek(tcp->pid, i*4, &tcp->u_arg[i]) < 0)
@@ -2156,6 +2179,8 @@ get_syscall_result(struct tcb *tcp)
 	if (upeek(tcp->pid, REG_A_BASE + 2, &xtensa_a2) < 0)
 		return -1;
 #elif defined(ARC)
+#elif defined(RISCV)
+        /* FIXME: Is this true?  I think in the new ABI it is? */
 	/* already done by get_regs */
 #endif
 	return 1;
@@ -2470,6 +2495,13 @@ get_error(struct tcb *tcp)
 	else {
 		tcp->u_rval = arc_regs.scratch.r0;
 	}
+#elif defined(RISCV)
+        if (check_errno && is_negated_errno(riscv_regs.a0)) {
+            tcp->u_rval = -1;
+            u_error = -riscv_regs.a0;
+        } else {
+            tcp->u_rval = riscv_regs.a0;
+        }
 #endif
 	tcp->u_error = u_error;
 }

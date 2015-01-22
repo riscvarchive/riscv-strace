@@ -611,6 +611,7 @@ extern void call_summary(FILE *);
  || defined(X86_64) || defined(X32) \
  || defined(AARCH64) \
  || defined(ARM) \
+ || defined(RISCV) \
  || defined(SPARC) || defined(SPARC64) \
  || defined(TILE) \
  || defined(OR1K) \

@@ -1457,6 +1457,9 @@ change_syscall(struct tcb *tcp, arg_setup_state *state, int new)
 #elif defined(ARC)
 	/* setbpt/clearbpt never used: */
 	/* ARC only supported since 3.9 */
+#elif defined(RISCV)
+	/* setbpt/clearbpt never used: */
+	/* RISC-V CPUs are only supported since about linux-3.14 */
 #else
 #warning Do not know how to handle change_syscall for this architecture
 #endif /* architecture */

@@ -938,6 +938,9 @@ sys_sigreturn(struct tcb *tcp)
 	/* Xtensa only has rt_sys_sigreturn */
 #elif defined(ARC)
 	/* ARC syscall ABI only supports rt_sys_sigreturn */
+#elif defined(RISCV)
+        /* FIXME: RISCV: I think this is true? */
+        /* RISC-V only has rt_sys_sigreturn */
 #else
 # warning No sys_sigreturn() for this architecture
 # warning         (no problem, just a reminder :-)
