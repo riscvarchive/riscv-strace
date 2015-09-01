@@ -38,24 +38,7 @@
 #endif
 #include <net/if.h>
 
-static const struct xlat iffflags[] = {
-	{ IFF_UP,		"IFF_UP"		},
-	{ IFF_BROADCAST,	"IFF_BROADCAST"		},
-	{ IFF_DEBUG,		"IFF_DEBUG"		},
-	{ IFF_LOOPBACK,		"IFF_LOOPBACK"		},
-	{ IFF_POINTOPOINT,	"IFF_POINTOPOINT"	},
-	{ IFF_NOTRAILERS,	"IFF_NOTRAILERS"	},
-	{ IFF_RUNNING,		"IFF_RUNNING"		},
-	{ IFF_NOARP,		"IFF_NOARP"		},
-	{ IFF_PROMISC,		"IFF_PROMISC"		},
-	{ IFF_ALLMULTI,		"IFF_ALLMULTI"		},
-	{ IFF_MASTER,		"IFF_MASTER"		},
-	{ IFF_SLAVE,		"IFF_SLAVE"		},
-	{ IFF_MULTICAST,	"IFF_MULTICAST"		},
-	{ IFF_PORTSEL,		"IFF_PORTSEL"		},
-	{ IFF_AUTOMEDIA,	"IFF_AUTOMEDIA"		},
-	{ 0,			NULL			}
-};
+#include "xlat/iffflags.h"
 
 static void
 print_addr(struct tcb *tcp, long addr, struct ifreq *ifr)

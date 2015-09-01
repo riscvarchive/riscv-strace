@@ -27,16 +27,13 @@
  */
 
 #include "defs.h"
-#include <sys/ioctl.h>
-#include <scsi/sg.h>
 
-static const struct xlat sg_io_dxfer_direction[] = {
-	{SG_DXFER_NONE,        "SG_DXFER_NONE"},
-	{SG_DXFER_TO_DEV,      "SG_DXFER_TO_DEV"},
-	{SG_DXFER_FROM_DEV,    "SG_DXFER_FROM_DEV"},
-	{SG_DXFER_TO_FROM_DEV, "SG_DXFER_TO_FROM_DEV"},
-	{0, NULL}
-};
+#ifdef HAVE_SCSI_SG_H
+
+# include <sys/ioctl.h>
+# include <scsi/sg.h>
+
+#include "xlat/sg_io_dxfer_direction.h"
 
 static void
 print_sg_io_buffer(struct tcb *tcp, unsigned char *addr, int len)
@@ -137,3 +134,5 @@ scsi_ioctl(struct tcb *tcp, long code, long arg)
 	}
 	return 1;
 }
+
+#endif /* HAVE_SCSI_SG_H */

@@ -2,7 +2,11 @@
 
 #export DH_VERBOSE=1
 
-CFLAGS = -Wall -g
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+
+CFLAGS += -Wall -g
 
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
   CFLAGS += -O0
@@ -33,7 +37,12 @@ else
   CONFIG_OPTS = --build=$(DEB_BUILD_GNU_TYPE) --host=$(DEB_HOST_GNU_TYPE)
 endif
 
-all build: build-stamp $(extra_build_targets)
+all: build
+
+build: build-arch build-indep
+
+build-arch: build-stamp $(extra_build_targets)
+build-indep: build-stamp $(extra_build_targets)
 
 %-stamp: %/Makefile
 	$(MAKE) -C $*

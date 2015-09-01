@@ -14,22 +14,33 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = $(WARN_CFLAGS)
 AM_CPPFLAGS = -I$(srcdir)/$(OS)/$(ARCH) -I$(srcdir)/$(OS) -I$(builddir)/$(OS)
 
+include xlat/Makemodule.am
+
 strace_SOURCES =	\
+	aio.c		\
 	bjm.c		\
 	block.c		\
 	count.c		\
 	desc.c		\
+	fanotify.c	\
 	file.c		\
+	inotify.c	\
 	io.c		\
 	ioctl.c		\
+	ioprio.c	\
 	ipc.c		\
+	kexec.c		\
+	keyctl.c	\
+	ldt.c		\
 	loop.c		\
 	mem.c		\
 	mtd.c		\
 	net.c		\
 	pathtrace.c	\
 	process.c	\
+	ptp.c		\
 	quota.c		\
+	reboot.c	\
 	resource.c	\
 	scsi.c		\
 	signal.c	\
@@ -42,6 +53,15 @@ strace_SOURCES =	\
 	time.c		\
 	util.c		\
 	vsprintf.c
+
+if USE_LIBUNWIND
+strace_SOURCES += unwind.c
+strace_CPPFLAGS = $(AM_CPPFLAGS) $(libunwind_CPPFLAGS)
+strace_LDFLAGS = $(libunwind_LDFLAGS)
+strace_LDADD = $(libunwind_LIBS)
+else
+strace_CPPFLAGS = $(AM_CPPFLAGS)
+endif
 
 noinst_HEADERS = defs.h
 # Enable this to get link map generated
@@ -71,7 +91,6 @@ EXTRA_DIST =				\
 	debian/strace64.manpages	\
 	debian/watch			\
 	errnoent.sh			\
-	ioctlsort.c			\
 	linux/aarch64/errnoent1.h	\
 	linux/aarch64/ioctlent.h.in	\
 	linux/aarch64/ioctlent1.h	\
@@ -82,6 +101,8 @@ EXTRA_DIST =				\
 	linux/alpha/ioctlent.h.in	\
 	linux/alpha/signalent.h		\
 	linux/alpha/syscallent.h	\
+	linux/arc/ioctlent.h.in		\
+	linux/arc/syscallent.h		\
 	linux/arm/ioctlent.h.in		\
 	linux/arm/syscallent.h		\
 	linux/avr32/ioctlent.h.in	\
@@ -90,6 +111,7 @@ EXTRA_DIST =				\
 	linux/bfin/syscallent.h		\
 	linux/dummy.h			\
 	linux/errnoent.h		\
+	linux/fanotify.h		\
 	linux/hppa/errnoent.h		\
 	linux/hppa/ioctlent.h.in	\
 	linux/hppa/signalent.h		\
@@ -99,10 +121,13 @@ EXTRA_DIST =				\
 	linux/ia64/ioctlent.h.in	\
 	linux/ia64/signalent.h		\
 	linux/ia64/syscallent.h		\
+	linux/inotify.h			\
 	linux/ioctlent-filter.awk	\
 	linux/ioctlent.h.in		\
 	linux/ioctlent.sh		\
 	linux/ioctlsort.c		\
+	linux/kexec.h			\
+	linux/keyctl.h			\
 	linux/m68k/ioctlent.h.in	\
 	linux/m68k/syscallent.h		\
 	linux/metag/ioctlent.h.in	\
@@ -121,12 +146,15 @@ EXTRA_DIST =				\
 	linux/mtd-abi.h			\
 	linux/or1k/ioctlent.h.in	\
 	linux/or1k/syscallent.h		\
+	linux/personality.h		\
 	linux/powerpc/errnoent1.h	\
 	linux/powerpc/ioctlent.h.in	\
 	linux/powerpc/ioctlent1.h	\
 	linux/powerpc/signalent1.h	\
 	linux/powerpc/syscallent.h	\
 	linux/powerpc/syscallent1.h	\
+	linux/ptp_clock.h		\
+	linux/reboot.h			\
 	linux/s390/ioctlent.h.in	\
 	linux/s390/syscallent.h		\
 	linux/s390x/ioctlent.h.in	\
@@ -196,6 +224,9 @@ EXTRA_DIST =				\
 	strace-log-merge		\
 	strace.spec			\
 	syscallent.sh			\
+	$(XLAT_INPUT_FILES)		\
+	$(XLAT_HEADER_FILES)		\
+	xlat/gen.sh			\
 	xlate.el
 
 .PHONY: srpm
@@ -240,14 +271,14 @@ $(srcdir)/ChangeLog: $(srcdir)/gitlog-to-changelog $(srcdir)/Makefile.in \
 $(srcdir)/CREDITS: $(srcdir)/CREDITS.in $(srcdir)/.mailmap \
 		   $(srcdir)/Makefile.in $(srcdir)/.version
 	$(AM_V_GEN)							\
-	{								\
+	(								\
 	  cd $(srcdir);							\
 	  sed '/^##/,$$d' CREDITS.in;					\
 	  { sed -n '1,/^##>/d; s/  \+/\t/; s/^./&/p' CREDITS.in;	\
 	    git log --pretty=format:'%aN	%aE';			\
 	  } | LC_ALL=C sort -u						\
 	    | awk -F'\t' '{printf("\t%s <%s>\n",$$1,$$2)}';		\
-	} > $@-t && mv $@-t $@
+	) > $@-t && mv $@-t $@
 
 export TAR_OPTIONS = --owner=0 --group=0 --numeric-owner --mode=go-w,go+rX
 

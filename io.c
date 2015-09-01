@@ -218,6 +218,26 @@ sys_pwrite(struct tcb *tcp)
 }
 
 #if HAVE_SYS_UIO_H
+
+static void
+print_llu_from_low_high_val(struct tcb *tcp, int arg)
+{
+#if SIZEOF_LONG == SIZEOF_LONG_LONG
+	tprintf("%lu", (unsigned long) tcp->u_arg[arg]);
+#elif defined(LINUX_MIPSN32)
+	tprintf("%llu", (unsigned long long) tcp->ext_arg[arg]);
+#else
+# ifdef X32
+	if (current_personality == 0)
+		tprintf("%llu", (unsigned long long) tcp->ext_arg[arg]);
+	else
+# endif
+	tprintf("%llu",
+		((unsigned long long) (unsigned long) tcp->u_arg[arg + 1] << sizeof(long) * 8)
+		| (unsigned long long) (unsigned long) tcp->u_arg[arg]);
+#endif
+}
+
 int
 sys_preadv(struct tcb *tcp)
 {
@@ -231,7 +251,7 @@ sys_preadv(struct tcb *tcp)
 		}
 		tprint_iov(tcp, tcp->u_arg[2], tcp->u_arg[1], 1);
 		tprintf(", %lu, ", tcp->u_arg[2]);
-		printllval(tcp, "%llu", PREAD_OFFSET_ARG);
+		print_llu_from_low_high_val(tcp, 3);
 	}
 	return 0;
 }
@@ -244,7 +264,7 @@ sys_pwritev(struct tcb *tcp)
 		tprints(", ");
 		tprint_iov(tcp, tcp->u_arg[2], tcp->u_arg[1], 1);
 		tprintf(", %lu, ", tcp->u_arg[2]);
-		printllval(tcp, "%llu", PREAD_OFFSET_ARG);
+		print_llu_from_low_high_val(tcp, 3);
 	}
 	return 0;
 }
@@ -317,21 +337,7 @@ sys_sendfile64(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat splice_flags[] = {
-#ifdef SPLICE_F_MOVE
-	{ SPLICE_F_MOVE,     "SPLICE_F_MOVE"     },
-#endif
-#ifdef SPLICE_F_NONBLOCK
-	{ SPLICE_F_NONBLOCK, "SPLICE_F_NONBLOCK" },
-#endif
-#ifdef SPLICE_F_MORE
-	{ SPLICE_F_MORE,     "SPLICE_F_MORE"     },
-#endif
-#ifdef SPLICE_F_GIFT
-	{ SPLICE_F_GIFT,     "SPLICE_F_GIFT"     },
-#endif
-	{ 0,                 NULL                },
-};
+#include "xlat/splice_flags.h"
 
 int
 sys_tee(struct tcb *tcp)

@@ -63,84 +63,14 @@
 
 extern void printsigevent(struct tcb *tcp, long arg);
 
-static const struct xlat msgctl_flags[] = {
-	{ IPC_RMID,	"IPC_RMID"	},
-	{ IPC_SET,	"IPC_SET"	},
-	{ IPC_STAT,	"IPC_STAT"	},
-	{ IPC_INFO,	"IPC_INFO"	},
-	{ MSG_STAT,	"MSG_STAT"	},
-	{ MSG_INFO,	"MSG_INFO"	},
-	{ 0,		NULL		},
-};
-
-static const struct xlat semctl_flags[] = {
-	{ IPC_RMID,	"IPC_RMID"	},
-	{ IPC_SET,	"IPC_SET"	},
-	{ IPC_STAT,	"IPC_STAT"	},
-	{ IPC_INFO,	"IPC_INFO"	},
-	{ SEM_STAT,	"SEM_STAT"	},
-	{ SEM_INFO,	"SEM_INFO"	},
-	{ GETPID,	"GETPID"	},
-	{ GETVAL,	"GETVAL"	},
-	{ GETALL,	"GETALL"	},
-	{ GETNCNT,	"GETNCNT"	},
-	{ GETZCNT,	"GETZCNT"	},
-	{ SETVAL,	"SETVAL"	},
-	{ SETALL,	"SETALL"	},
-	{ 0,		NULL		},
-};
-
-static const struct xlat shmctl_flags[] = {
-	{ IPC_RMID,	"IPC_RMID"	},
-	{ IPC_SET,	"IPC_SET"	},
-	{ IPC_STAT,	"IPC_STAT"	},
-	{ IPC_INFO,	"IPC_INFO"	},
-	{ SHM_STAT,	"SHM_STAT"	},
-	{ SHM_INFO,	"SHM_INFO"	},
-#ifdef SHM_LOCK
-	{ SHM_LOCK,	"SHM_LOCK"	},
-#endif
-#ifdef SHM_UNLOCK
-	{ SHM_UNLOCK,	"SHM_UNLOCK"	},
-#endif
-	{ 0,		NULL		},
-};
-
-static const struct xlat resource_flags[] = {
-	{ IPC_CREAT,	"IPC_CREAT"	},
-	{ IPC_EXCL,	"IPC_EXCL"	},
-	{ IPC_NOWAIT,	"IPC_NOWAIT"	},
-	{ 0,		NULL		},
-};
-
-static const struct xlat shm_resource_flags[] = {
-	{ IPC_CREAT,	"IPC_CREAT"	},
-	{ IPC_EXCL,	"IPC_EXCL"	},
-#ifdef SHM_HUGETLB
-	{ SHM_HUGETLB,	"SHM_HUGETLB"	},
-#endif
-	{ 0,		NULL		},
-};
-
-static const struct xlat shm_flags[] = {
-	{ SHM_REMAP,	"SHM_REMAP"	},
-	{ SHM_RDONLY,	"SHM_RDONLY"	},
-	{ SHM_RND,	"SHM_RND"	},
-	{ 0,		NULL		},
-};
-
-static const struct xlat msg_flags[] = {
-	{ MSG_NOERROR,	"MSG_NOERROR"	},
-	{ MSG_EXCEPT,	"MSG_EXCEPT"	},
-	{ IPC_NOWAIT,	"IPC_NOWAIT"	},
-	{ 0,		NULL		},
-};
-
-static const struct xlat semop_flags[] = {
-	{ SEM_UNDO,	"SEM_UNDO"	},
-	{ IPC_NOWAIT,	"IPC_NOWAIT"	},
-	{ 0,		NULL		},
-};
+#include "xlat/msgctl_flags.h"
+#include "xlat/semctl_flags.h"
+#include "xlat/shmctl_flags.h"
+#include "xlat/resource_flags.h"
+#include "xlat/shm_resource_flags.h"
+#include "xlat/shm_flags.h"
+#include "xlat/ipc_msg_flags.h"
+#include "xlat/semop_flags.h"
 
 int sys_msgget(struct tcb *tcp)
 {
@@ -203,7 +133,7 @@ tprint_msgsnd(struct tcb *tcp, long addr, unsigned long count,
 		tprints("}");
 	}
 	tprintf(", %lu, ", count);
-	printflags(msg_flags, flags, "MSG_???");
+	printflags(ipc_msg_flags, flags, "MSG_???");
 }
 
 int sys_msgsnd(struct tcb *tcp)
@@ -254,11 +184,11 @@ int sys_msgrcv(struct tcb *tcp)
 				tprint_msgrcv(tcp, (long) tmp.msgp,
 					tcp->u_arg[1], tmp.msgtyp);
 			}
-			printflags(msg_flags, tcp->u_arg[2], "MSG_???");
+			printflags(ipc_msg_flags, tcp->u_arg[2], "MSG_???");
 		} else {
 			tprint_msgrcv(tcp, tcp->u_arg[1],
 				tcp->u_arg[2], tcp->u_arg[3]);
-			printflags(msg_flags, tcp->u_arg[4], "MSG_???");
+			printflags(ipc_msg_flags, tcp->u_arg[4], "MSG_???");
 		}
 	}
 	return 0;

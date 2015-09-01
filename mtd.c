@@ -41,48 +41,11 @@
 # include <mtd/ubi-user.h>
 #endif
 
-static const struct xlat mtd_mode_options[] = {
-	{ MTD_OPS_PLACE_OOB,	"MTD_OPS_PLACE_OOB"	},
-	{ MTD_OPS_AUTO_OOB,	"MTD_OPS_AUTO_OOB"	},
-	{ MTD_OPS_RAW,		"MTD_OPS_RAW"		},
-	{ 0,			NULL			},
-};
-
-static const struct xlat mtd_type_options[] = {
-	{ MTD_ABSENT,		"MTD_ABSENT"		},
-	{ MTD_RAM,		"MTD_RAM"		},
-	{ MTD_ROM,		"MTD_ROM"		},
-	{ MTD_NORFLASH,		"MTD_NORFLASH"		},
-	{ MTD_NANDFLASH,	"MTD_NANDFLASH"		},
-	{ MTD_DATAFLASH,	"MTD_DATAFLASH"		},
-	{ MTD_UBIVOLUME,	"MTD_UBIVOLUME"		},
-	{ MTD_MLCNANDFLASH,	"MTD_MLCNANDFLASH"	},
-	{ 0,			NULL			},
-};
-
-static const struct xlat mtd_flags_options[] = {
-	{ MTD_WRITEABLE,	"MTD_WRITEABLE"		},
-	{ MTD_BIT_WRITEABLE,	"MTD_BIT_WRITEABLE"	},
-	{ MTD_NO_ERASE,		"MTD_NO_ERASE"		},
-	{ MTD_POWERUP_LOCK,	"MTD_POWERUP_LOCK"	},
-	{ 0,			NULL			},
-};
-
-static const struct xlat mtd_otp_options[] = {
-	{ MTD_OTP_OFF,		"MTD_OTP_OFF"		},
-	{ MTD_OTP_FACTORY,	"MTD_OTP_FACTORY"	},
-	{ MTD_OTP_USER,		"MTD_OTP_USER"		},
-	{ 0,			NULL			},
-};
-
-static const struct xlat mtd_nandecc_options[] = {
-	{ MTD_NANDECC_OFF,		"MTD_NANDECC_OFF"		},
-	{ MTD_NANDECC_PLACE,		"MTD_NANDECC_PLACE"		},
-	{ MTD_NANDECC_AUTOPLACE,	"MTD_NANDECC_AUTOPLACE"		},
-	{ MTD_NANDECC_PLACEONLY,	"MTD_NANDECC_PLACEONLY"		},
-	{ MTD_NANDECC_AUTOPL_USR,	"MTD_NANDECC_AUTOPL_USR"	},
-	{ 0,				NULL				},
-};
+#include "xlat/mtd_mode_options.h"
+#include "xlat/mtd_type_options.h"
+#include "xlat/mtd_flags_options.h"
+#include "xlat/mtd_otp_options.h"
+#include "xlat/mtd_nandecc_options.h"
 
 int mtd_ioctl(struct tcb *tcp, long code, long arg)
 {
@@ -286,16 +249,8 @@ int mtd_ioctl(struct tcb *tcp, long code, long arg)
 	}
 }
 
-static const struct xlat ubi_volume_types[] = {
-	{ UBI_DYNAMIC_VOLUME,	"UBI_DYNAMIC_VOLUME"	},
-	{ UBI_STATIC_VOLUME,	"UBI_STATIC_VOLUME"	},
-	{ 0,			NULL			},
-};
-
-static const struct xlat ubi_volume_props[] = {
-	{ UBI_VOL_PROP_DIRECT_WRITE,	"UBI_VOL_PROP_DIRECT_WRITE"	},
-	{ 0,			NULL			},
-};
+#include "xlat/ubi_volume_types.h"
+#include "xlat/ubi_volume_props.h"
 
 int ubi_ioctl(struct tcb *tcp, long code, long arg)
 {

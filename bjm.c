@@ -69,26 +69,9 @@ struct module_info
 	long usecount;
 };
 
-static const struct xlat which[] = {
-	{ 0,		"0"		},
-	{ QM_MODULES,	"QM_MODULES"	},
-	{ QM_DEPS,	"QM_DEPS"	},
-	{ QM_REFS,	"QM_REFS"	},
-	{ QM_SYMBOLS,	"QM_SYMBOLS"	},
-	{ QM_INFO,	"QM_INFO"	},
-	{ 0,		NULL		},
-};
-
-static const struct xlat modflags[] = {
-	{ MOD_UNINITIALIZED,	"MOD_UNINITIALIZED"	},
-	{ MOD_RUNNING,		"MOD_RUNNING"		},
-	{ MOD_DELETED,		"MOD_DELETED"		},
-	{ MOD_AUTOCLEAN,	"MOD_AUTOCLEAN"		},
-	{ MOD_VISITED,		"MOD_VISITED"		},
-	{ MOD_USED_ONCE,	"MOD_USED_ONCE"		},
-	{ MOD_JUST_FREED,	"MOD_JUST_FREED"	},
-	{ 0,			NULL			},
-};
+#include "xlat/qm_which.h"
+#include "xlat/modflags.h"
+#include "xlat/delete_module_flags.h"
 
 int
 sys_query_module(struct tcb *tcp)
@@ -96,7 +79,7 @@ sys_query_module(struct tcb *tcp)
 	if (entering(tcp)) {
 		printstr(tcp, tcp->u_arg[0], -1);
 		tprints(", ");
-		printxval(which, tcp->u_arg[1], "QM_???");
+		printxval(qm_which, tcp->u_arg[1], "QM_???");
 		tprints(", ");
 	} else {
 		size_t ret;
@@ -192,11 +175,45 @@ sys_create_module(struct tcb *tcp)
 }
 
 int
+sys_delete_module(struct tcb *tcp)
+{
+	if (entering(tcp)) {
+		printstr(tcp, tcp->u_arg[0], -1);
+		tprints(", ");
+		printflags(delete_module_flags, tcp->u_arg[1], "O_???");
+	}
+	return 0;
+}
+
+int
 sys_init_module(struct tcb *tcp)
 {
 	if (entering(tcp)) {
 		tprintf("%#lx, %lu, ", tcp->u_arg[0], tcp->u_arg[1]);
 		printstr(tcp, tcp->u_arg[2], -1);
 	}
+	return 0;
+}
+
+#define MODULE_INIT_IGNORE_MODVERSIONS  1
+#define MODULE_INIT_IGNORE_VERMAGIC     2
+
+#include "xlat/module_init_flags.h"
+
+int
+sys_finit_module(struct tcb *tcp)
+{
+	if (exiting(tcp))
+		return 0;
+
+	/* file descriptor */
+	printfd(tcp, tcp->u_arg[0]);
+	tprints(", ");
+	/* param_values */
+	printstr(tcp, tcp->u_arg[1], -1);
+	tprints(", ");
+	/* flags */
+	printflags(module_init_flags, tcp->u_arg[2], "MODULE_INIT_???");
+
 	return 0;
 }

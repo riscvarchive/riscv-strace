@@ -46,7 +46,6 @@
 
 #ifdef HAVE_SYS_REG_H
 # include <sys/reg.h>
-# define PTRACE_PEEKUSR PTRACE_PEEKUSER
 #elif defined(HAVE_LINUX_PTRACE_H)
 # undef PTRACE_SYSCALL
 # ifdef HAVE_STRUCT_IA64_FPREG
@@ -55,7 +54,11 @@
 # ifdef HAVE_STRUCT_PT_ALL_USER_REGS
 #  define pt_all_user_regs XXX_pt_all_user_regs
 # endif
+# ifdef HAVE_STRUCT_PTRACE_PEEKSIGINFO_ARGS
+#  define ptrace_peeksiginfo_args XXX_ptrace_peeksiginfo_args
+# endif
 # include <linux/ptrace.h>
+# undef ptrace_peeksiginfo_args
 # undef ia64_fpreg
 # undef pt_all_user_regs
 #endif
@@ -76,13 +79,13 @@ string_to_uint(const char *str)
 }
 
 int
-tv_nz(struct timeval *a)
+tv_nz(const struct timeval *a)
 {
 	return a->tv_sec || a->tv_usec;
 }
 
 int
-tv_cmp(struct timeval *a, struct timeval *b)
+tv_cmp(const struct timeval *a, const struct timeval *b)
 {
 	if (a->tv_sec < b->tv_sec
 	    || (a->tv_sec == b->tv_sec && a->tv_usec < b->tv_usec))
@@ -94,13 +97,13 @@ tv_cmp(struct timeval *a, struct timeval *b)
 }
 
 double
-tv_float(struct timeval *tv)
+tv_float(const struct timeval *tv)
 {
 	return tv->tv_sec + tv->tv_usec/1000000.0;
 }
 
 void
-tv_add(struct timeval *tv, struct timeval *a, struct timeval *b)
+tv_add(struct timeval *tv, const struct timeval *a, const struct timeval *b)
 {
 	tv->tv_sec = a->tv_sec + b->tv_sec;
 	tv->tv_usec = a->tv_usec + b->tv_usec;
@@ -111,7 +114,7 @@ tv_add(struct timeval *tv, struct timeval *a, struct timeval *b)
 }
 
 void
-tv_sub(struct timeval *tv, struct timeval *a, struct timeval *b)
+tv_sub(struct timeval *tv, const struct timeval *a, const struct timeval *b)
 {
 	tv->tv_sec = a->tv_sec - b->tv_sec;
 	tv->tv_usec = a->tv_usec - b->tv_usec;
@@ -122,7 +125,7 @@ tv_sub(struct timeval *tv, struct timeval *a, struct timeval *b)
 }
 
 void
-tv_div(struct timeval *tv, struct timeval *a, int n)
+tv_div(struct timeval *tv, const struct timeval *a, int n)
 {
 	tv->tv_usec = (a->tv_sec % n * 1000000 + a->tv_usec + n / 2) / n;
 	tv->tv_sec = a->tv_sec / n + tv->tv_usec / 1000000;
@@ -130,7 +133,7 @@ tv_div(struct timeval *tv, struct timeval *a, int n)
 }
 
 void
-tv_mul(struct timeval *tv, struct timeval *a, int n)
+tv_mul(struct timeval *tv, const struct timeval *a, int n)
 {
 	tv->tv_usec = a->tv_usec * n;
 	tv->tv_sec = a->tv_sec * n + tv->tv_usec / 1000000;
@@ -156,6 +159,53 @@ stpcpy(char *dst, const char *src)
 }
 #endif
 
+/* Find a next bit which is set.
+ * Starts testing at cur_bit.
+ * Returns -1 if no more bits are set.
+ *
+ * We never touch bytes we don't need to.
+ * On big-endian, array is assumed to consist of
+ * current_wordsize wide words: for example, is current_wordsize is 4,
+ * the bytes are walked in 3,2,1,0, 7,6,5,4, 11,10,9,8 ... sequence.
+ * On little-endian machines, word size is immaterial.
+ */
+int
+next_set_bit(const void *bit_array, unsigned cur_bit, unsigned size_bits)
+{
+	const unsigned endian = 1;
+	int little_endian = *(char*)&endian;
+
+	const uint8_t *array = bit_array;
+	unsigned pos = cur_bit / 8;
+	unsigned pos_xor_mask = little_endian ? 0 : current_wordsize-1;
+
+	for (;;) {
+		uint8_t bitmask;
+		uint8_t cur_byte;
+
+		if (cur_bit >= size_bits)
+			return -1;
+		cur_byte = array[pos ^ pos_xor_mask];
+		if (cur_byte == 0) {
+			cur_bit = (cur_bit + 8) & (-8);
+			pos++;
+			continue;
+		}
+		bitmask = 1 << (cur_bit & 7);
+		for (;;) {
+			if (cur_byte & bitmask)
+				return cur_bit;
+			cur_bit++;
+			if (cur_bit >= size_bits)
+				return -1;
+			bitmask <<= 1;
+			/* This check *can't be* optimized out: */
+			if (bitmask == 0)
+				break;
+		}
+		pos++;
+	}
+}
 /*
  * Print entry in struct xlat table, if there.
  */
@@ -1056,15 +1106,15 @@ umovestr(struct tcb *tcp, long addr, int len, char *laddr)
 }
 
 int
-upeek(struct tcb *tcp, long off, long *res)
+upeek(int pid, long off, long *res)
 {
 	long val;
 
 	errno = 0;
-	val = ptrace(PTRACE_PEEKUSER, tcp->pid, (char *) off, 0);
+	val = ptrace(PTRACE_PEEKUSER, (pid_t)pid, (char *) off, 0);
 	if (val == -1 && errno) {
 		if (errno != ESRCH) {
-			perror_msg("upeek: PTRACE_PEEKUSER pid:%d @0x%lx)", tcp->pid, off);
+			perror_msg("upeek: PTRACE_PEEKUSER pid:%d @0x%lx)", pid, off);
 		}
 		return -1;
 	}
@@ -1106,15 +1156,15 @@ arg_setup(struct tcb *tcp, arg_setup_state *state)
 	unsigned long cfm, sof, sol;
 	long bsp;
 
-	if (ia32) {
+	if (ia64_ia32mode) {
 		/* Satisfy a false GCC warning.  */
 		*state = NULL;
 		return 0;
 	}
 
-	if (upeek(tcp, PT_AR_BSP, &bsp) < 0)
+	if (upeek(tcp->pid, PT_AR_BSP, &bsp) < 0)
 		return -1;
-	if (upeek(tcp, PT_CFM, (long *) &cfm) < 0)
+	if (upeek(tcp->pid, PT_CFM, (long *) &cfm) < 0)
 		return -1;
 
 	sof = (cfm >> 0) & 0x7f;
@@ -1132,8 +1182,8 @@ get_arg0(struct tcb *tcp, arg_setup_state *state, long *valp)
 {
 	int ret;
 
-	if (ia32)
-		ret = upeek(tcp, PT_R11, valp);
+	if (ia64_ia32mode)
+		ret = upeek(tcp->pid, PT_R11, valp);
 	else
 		ret = umoven(tcp,
 			      (unsigned long) ia64_rse_skip_regs(*state, 0),
@@ -1146,8 +1196,8 @@ get_arg1(struct tcb *tcp, arg_setup_state *state, long *valp)
 {
 	int ret;
 
-	if (ia32)
-		ret = upeek(tcp, PT_R9, valp);
+	if (ia64_ia32mode)
+		ret = upeek(tcp->pid, PT_R9, valp);
 	else
 		ret = umoven(tcp,
 			      (unsigned long) ia64_rse_skip_regs(*state, 1),
@@ -1161,7 +1211,7 @@ set_arg0(struct tcb *tcp, arg_setup_state *state, long val)
 	int req = PTRACE_POKEDATA;
 	void *ap;
 
-	if (ia32) {
+	if (ia64_ia32mode) {
 		ap = (void *) (intptr_t) PT_R11;	 /* r11 == EBX */
 		req = PTRACE_POKEUSER;
 	} else
@@ -1177,7 +1227,7 @@ set_arg1(struct tcb *tcp, arg_setup_state *state, long val)
 	int req = PTRACE_POKEDATA;
 	void *ap;
 
-	if (ia32) {
+	if (ia64_ia32mode) {
 		ap = (void *) (intptr_t) PT_R9;		/* r9 == ECX */
 		req = PTRACE_POKEUSER;
 	} else
@@ -1268,8 +1318,8 @@ typedef int arg_setup_state;
 
 # define arg_setup(tcp, state)         (0)
 # define arg_finish_change(tcp, state) 0
-# define get_arg0(tcp, cookie, valp)   (upeek((tcp), arg0_offset, (valp)))
-# define get_arg1(tcp, cookie, valp)   (upeek((tcp), arg1_offset, (valp)))
+# define get_arg0(tcp, cookie, valp)   (upeek((tcp)->pid, arg0_offset, (valp)))
+# define get_arg1(tcp, cookie, valp)   (upeek((tcp)->pid, arg1_offset, (valp)))
 
 static int
 set_arg0(struct tcb *tcp, void *cookie, long val)
@@ -1343,7 +1393,7 @@ change_syscall(struct tcb *tcp, arg_setup_state *state, int new)
 	/* setbpt/clearbpt never used: */
 	/* Blackfin is only supported since about linux-2.6.23 */
 #elif defined(IA64)
-	if (ia32) {
+	if (ia64_ia32mode) {
 		switch (new) {
 		case 2:
 			break;	/* x86 SYS_fork */
@@ -1404,6 +1454,9 @@ change_syscall(struct tcb *tcp, arg_setup_state *state, int new)
 #elif defined(XTENSA)
 	/* setbpt/clearbpt never used: */
 	/* Xtensa is only supported since linux 2.6.13 */
+#elif defined(ARC)
+	/* setbpt/clearbpt never used: */
+	/* ARC only supported since 3.9 */
 #else
 #warning Do not know how to handle change_syscall for this architecture
 #endif /* architecture */
@@ -1435,8 +1488,7 @@ setbpt(struct tcb *tcp)
 			}
 	}
 
-	if (tcp->s_ent->sys_func == sys_fork ||
-	    tcp->s_ent->sys_func == sys_vfork) {
+	if (tcp->s_ent->sys_func == sys_fork) {
 		if (arg_setup(tcp, &state) < 0
 		    || get_arg0(tcp, &state, &tcp->inst[0]) < 0
 		    || get_arg1(tcp, &state, &tcp->inst[1]) < 0

@@ -2,6 +2,9 @@
 
 ME_="${0##*/}"
 
+LOG="$ME_.tmp"
+rm -f "$LOG"
+
 warn_() { printf >&2 '%s\n' "$*"; }
 fail_() { warn_ "$ME_: failed test: $*"; exit 1; }
 skip_() { warn_ "$ME_: skipped test: $*"; exit 77; }
@@ -14,17 +17,6 @@ check_prog()
 		framework_skip_ "$* is not available"
 }
 
-check_strace()
-{
-	STRACE=${*:-../strace}
-	$STRACE -V > /dev/null ||
-		framework_failure_ "$STRACE is not available"
-}
-
-timeout_duration=60
-check_timeout()
-{
-	TIMEOUT="timeout -s 9 $timeout_duration"
-	$TIMEOUT true > /dev/null 2>&1 ||
-		TIMEOUT=
-}
+: "${STRACE:=../strace}"
+: "${TIMEOUT_DURATION:=60}"
+: "${SLEEP_A_BIT:=sleep 1}"

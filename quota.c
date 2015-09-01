@@ -76,64 +76,18 @@
 #define Q_XQUOTARM	XQM_CMD(0x6)
 #define Q_XQUOTASYNC	XQM_CMD(0x7)
 
-static const struct xlat quotacmds[] = {
-	{Q_V1_QUOTAON, "Q_V1_QUOTAON"},
-	{Q_V1_QUOTAOFF, "Q_V1_QUOTAOFF"},
-	{Q_V1_GETQUOTA, "Q_V1_GETQUOTA"},
-	{Q_V1_SETQUOTA, "Q_V1_SETQUOTA"},
-	{Q_V1_SETUSE, "Q_V1_SETUSE"},
-	{Q_V1_SYNC, "Q_V1_SYNC"},
-	{Q_SETQLIM, "Q_SETQLIM"},
-	{Q_V1_GETSTATS, "Q_V1_GETSTATS"},
-	{Q_V1_RSQUASH, "Q_V1_RSQUASH"},
-
-	{Q_V2_GETQUOTA, "Q_V2_GETQUOTA"},
-	{Q_V2_SETQUOTA, "Q_V2_SETQUOTA"},
-	{Q_V2_SETUSE, "Q_V2_SETUSE"},
-	{Q_V2_GETINFO, "Q_V2_GETINFO"},
-	{Q_V2_SETINFO, "Q_V2_SETINFO"},
-	{Q_V2_SETGRACE, "Q_V2_SETGRACE"},
-	{Q_V2_SETFLAGS, "Q_V2_SETFLAGS"},
-	{Q_V2_GETSTATS, "Q_V2_GETSTATS"},
-
-	{Q_SYNC, "Q_SYNC"},
-	{Q_QUOTAON, "Q_QUOTAON"},
-	{Q_QUOTAOFF, "Q_QUOTAOFF"},
-	{Q_GETFMT, "Q_GETFMT"},
-	{Q_GETINFO, "Q_GETINFO"},
-	{Q_SETINFO, "Q_SETINFO"},
-	{Q_GETQUOTA, "Q_GETQUOTA"},
-	{Q_SETQUOTA, "Q_SETQUOTA"},
-
-	{Q_XQUOTAON, "Q_XQUOTAON"},
-	{Q_XQUOTAOFF, "Q_XQUOTAOFF"},
-	{Q_XGETQUOTA, "Q_XGETQUOTA"},
-	{Q_XSETQLIM, "Q_XSETQLIM"},
-	{Q_XGETQSTAT, "Q_XGETQSTAT"},
-	{Q_XQUOTARM, "Q_XQUOTARM"},
-	{Q_XQUOTASYNC, "Q_XQUOTASYNC"},
-
-	{0, NULL},
-};
+#include "xlat/quotacmds.h"
 
 #define USRQUOTA 0
 #define GRPQUOTA 1
 
-static const struct xlat quotatypes[] = {
-	{USRQUOTA, "USRQUOTA"},
-	{GRPQUOTA, "GRPQUOTA"},
-	{0, NULL},
-};
+#include "xlat/quotatypes.h"
 
 /* Quota format identifiers */
 #define QFMT_VFS_OLD 1
 #define QFMT_VFS_V0  2
 
-static const struct xlat quota_formats[] = {
-	{QFMT_VFS_OLD, "QFMT_VFS_OLD"},
-	{QFMT_VFS_V0, "QFMT_VFS_V0"},
-	{0, NULL},
-};
+#include "xlat/quota_formats.h"
 
 #define XFS_QUOTA_UDQ_ACCT	(1<<0)	/* user quota accounting */
 #define XFS_QUOTA_UDQ_ENFD	(1<<1)	/* user quota limits enforcement */
@@ -144,20 +98,8 @@ static const struct xlat quota_formats[] = {
 #define XFS_PROJ_QUOTA		(1<<1)	/* (IRIX) project quota type */
 #define XFS_GROUP_QUOTA		(1<<2)	/* group quota type */
 
-static const struct xlat xfs_quota_flags[] = {
-	{XFS_QUOTA_UDQ_ACCT, "XFS_QUOTA_UDQ_ACCT"},
-	{XFS_QUOTA_UDQ_ENFD, "XFS_QUOTA_UDQ_ENFD"},
-	{XFS_QUOTA_GDQ_ACCT, "XFS_QUOTA_GDQ_ACCT"},
-	{XFS_QUOTA_GDQ_ENFD, "XFS_QUOTA_GDQ_ENFD"},
-	{0, NULL}
-};
-
-static const struct xlat xfs_dqblk_flags[] = {
-	{XFS_USER_QUOTA, "XFS_USER_QUOTA"},
-	{XFS_PROJ_QUOTA, "XFS_PROJ_QUOTA"},
-	{XFS_GROUP_QUOTA, "XFS_GROUP_QUOTA"},
-	{0, NULL}
-};
+#include "xlat/xfs_quota_flags.h"
+#include "xlat/xfs_dqblk_flags.h"
 
 /*
  * Following flags are used to specify which fields are valid
@@ -169,15 +111,7 @@ static const struct xlat xfs_dqblk_flags[] = {
 #define QIF_BTIME	16
 #define QIF_ITIME	32
 
-static const struct xlat if_dqblk_valid[] = {
-	{QIF_BLIMITS, "QIF_BLIMITS"},
-	{QIF_SPACE, "QIF_SPACE"},
-	{QIF_ILIMITS, "QIF_ILIMITS"},
-	{QIF_INODES, "QIF_INODES"},
-	{QIF_BTIME, "QIF_BTIME"},
-	{QIF_ITIME, "QIF_ITIME"},
-	{0, NULL}
-};
+#include "xlat/if_dqblk_valid.h"
 
 struct if_dqblk
 {
@@ -249,12 +183,7 @@ struct xfs_dqblk
 #define IIF_IGRACE	2
 #define IIF_FLAGS	4
 
-static const struct xlat if_dqinfo_valid[] = {
-	{IIF_BGRACE, "IIF_BGRACE"},
-	{IIF_IGRACE, "IIF_IGRACE"},
-	{IIF_FLAGS, "IIF_FLAGS"},
-	{0, NULL}
-};
+#include "xlat/if_dqinfo_valid.h"
 
 struct if_dqinfo
 {

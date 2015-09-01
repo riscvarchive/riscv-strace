@@ -211,116 +211,19 @@ struct kernel_dirent {
 	char            d_name[1];
 };
 
-const struct xlat open_access_modes[] = {
-	{ O_RDONLY,	"O_RDONLY"	},
-	{ O_WRONLY,	"O_WRONLY"	},
-	{ O_RDWR,	"O_RDWR"	},
-#ifdef O_ACCMODE
-	{ O_ACCMODE,	"O_ACCMODE"	},
-#endif
-	{ 0,		NULL		},
-};
-
-const struct xlat open_mode_flags[] = {
-	{ O_CREAT,	"O_CREAT"	},
-	{ O_EXCL,	"O_EXCL"	},
-	{ O_NOCTTY,	"O_NOCTTY"	},
-	{ O_TRUNC,	"O_TRUNC"	},
-	{ O_APPEND,	"O_APPEND"	},
-	{ O_NONBLOCK,	"O_NONBLOCK"	},
-#ifdef O_SYNC
-	{ O_SYNC,	"O_SYNC"	},
-#endif
-#ifdef O_ASYNC
-	{ O_ASYNC,	"O_ASYNC"	},
-#endif
-#ifdef O_DSYNC
-	{ O_DSYNC,	"O_DSYNC"	},
-#endif
-#ifdef O_RSYNC
-	{ O_RSYNC,	"O_RSYNC"	},
-#endif
-#if defined(O_NDELAY) && (O_NDELAY != O_NONBLOCK)
-	{ O_NDELAY,	"O_NDELAY"	},
-#endif
-#ifdef O_PRIV
-	{ O_PRIV,	"O_PRIV"	},
-#endif
-#ifdef O_DIRECT
-	{ O_DIRECT,	"O_DIRECT"	},
-#endif
 #ifdef O_LARGEFILE
-# if O_LARGEFILE == 0		/* biarch platforms in 64-bit mode */
+# if O_LARGEFILE == 0          /* biarch platforms in 64-bit mode */
 #  undef O_LARGEFILE
 #  ifdef SPARC64
-#   define O_LARGEFILE	0x40000
+#   define O_LARGEFILE 0x40000
 #  elif defined X86_64 || defined S390X
-#   define O_LARGEFILE	0100000
+#   define O_LARGEFILE 0100000
 #  endif
 # endif
-# ifdef O_LARGEFILE
-	{ O_LARGEFILE,	"O_LARGEFILE"	},
-# endif
 #endif
-#ifdef O_DIRECTORY
-	{ O_DIRECTORY,	"O_DIRECTORY"	},
-#endif
-#ifdef O_NOFOLLOW
-	{ O_NOFOLLOW,	"O_NOFOLLOW"	},
-#endif
-#ifdef O_NOATIME
-	{ O_NOATIME,	"O_NOATIME"	},
-#endif
-#ifdef O_CLOEXEC
-	{ O_CLOEXEC,	"O_CLOEXEC"	},
-#endif
-#ifdef FNDELAY
-	{ FNDELAY,	"FNDELAY"	},
-#endif
-#ifdef FAPPEND
-	{ FAPPEND,	"FAPPEND"	},
-#endif
-#ifdef FMARK
-	{ FMARK,	"FMARK"		},
-#endif
-#ifdef FDEFER
-	{ FDEFER,	"FDEFER"	},
-#endif
-#ifdef FASYNC
-	{ FASYNC,	"FASYNC"	},
-#endif
-#ifdef FSHLOCK
-	{ FSHLOCK,	"FSHLOCK"	},
-#endif
-#ifdef FEXLOCK
-	{ FEXLOCK,	"FEXLOCK"	},
-#endif
-#ifdef FCREAT
-	{ FCREAT,	"FCREAT"	},
-#endif
-#ifdef FTRUNC
-	{ FTRUNC,	"FTRUNC"	},
-#endif
-#ifdef FEXCL
-	{ FEXCL,	"FEXCL"		},
-#endif
-#ifdef FNBIO
-	{ FNBIO,	"FNBIO"		},
-#endif
-#ifdef FSYNC
-	{ FSYNC,	"FSYNC"		},
-#endif
-#ifdef FNOCTTY
-	{ FNOCTTY,	"FNOCTTY"	},
-#endif
-#ifdef O_SHLOCK
-	{ O_SHLOCK,	"O_SHLOCK"	},
-#endif
-#ifdef O_EXLOCK
-	{ O_EXLOCK,	"O_EXLOCK"	},
-#endif
-	{ 0,		NULL		},
-};
+
+#include "xlat/open_access_modes.h"
+#include "xlat/open_mode_flags.h"
 
 #ifndef AT_FDCWD
 # define AT_FDCWD                -100
@@ -329,7 +232,7 @@ const struct xlat open_mode_flags[] = {
 /* The fd is an "int", so when decoding x86 on x86_64, we need to force sign
  * extension to get the right value.  We do this by declaring fd as int here.
  */
-static void
+void
 print_dirfd(struct tcb *tcp, int fd)
 {
 	if (fd == AT_FDCWD)
@@ -400,7 +303,7 @@ decode_open(struct tcb *tcp, int offset)
 			tprintf(", %#lo", tcp->u_arg[offset + 2]);
 		}
 	}
-	return 0;
+	return RVAL_FD;
 }
 
 int
@@ -418,23 +321,7 @@ sys_openat(struct tcb *tcp)
 }
 
 #if defined(SPARC) || defined(SPARC64)
-static const struct xlat openmodessol[] = {
-	{ 0,		"O_RDWR"	},
-	{ 1,		"O_RDONLY"	},
-	{ 2,		"O_WRONLY"	},
-	{ 0x80,		"O_NONBLOCK"	},
-	{ 8,		"O_APPEND"	},
-	{ 0x100,	"O_CREAT"	},
-	{ 0x200,	"O_TRUNC"	},
-	{ 0x400,	"O_EXCL"	},
-	{ 0x800,	"O_NOCTTY"	},
-	{ 0x10,		"O_SYNC"	},
-	{ 0x40,		"O_DSYNC"	},
-	{ 0x8000,	"O_RSYNC"	},
-	{ 4,		"O_NDELAY"	},
-	{ 0x1000,	"O_PRIV"	},
-	{ 0,		NULL		},
-};
+#include "xlat/openmodessol.h"
 
 int
 solaris_open(struct tcb *tcp)
@@ -461,22 +348,10 @@ sys_creat(struct tcb *tcp)
 		printpath(tcp, tcp->u_arg[0]);
 		tprintf(", %#lo", tcp->u_arg[1]);
 	}
-	return 0;
+	return RVAL_FD;
 }
 
-static const struct xlat access_flags[] = {
-	{ F_OK,		"F_OK",		},
-	{ R_OK,		"R_OK"		},
-	{ W_OK,		"W_OK"		},
-	{ X_OK,		"X_OK"		},
-#ifdef EFF_ONLY_OK
-	{ EFF_ONLY_OK,	"EFF_ONLY_OK"	},
-#endif
-#ifdef EX_OK
-	{ EX_OK,	"EX_OK"		},
-#endif
-	{ 0,		NULL		},
-};
+#include "xlat/access_flags.h"
 
 static int
 decode_access(struct tcb *tcp, int offset)
@@ -512,18 +387,7 @@ sys_umask(struct tcb *tcp)
 	return RVAL_OCTAL;
 }
 
-const struct xlat whence_codes[] = {
-	{ SEEK_SET,	"SEEK_SET"	},
-	{ SEEK_CUR,	"SEEK_CUR"	},
-	{ SEEK_END,	"SEEK_END"	},
-#ifdef SEEK_DATA
-	{ SEEK_DATA,	"SEEK_DATA"	},
-#endif
-#ifdef SEEK_HOLE
-	{ SEEK_HOLE,	"SEEK_HOLE"	},
-#endif
-	{ 0,		NULL		},
-};
+#include "xlat/whence_codes.h"
 
 /* Linux kernel has exactly one version of lseek:
  * fs/read_write.c::SYSCALL_DEFINE3(lseek, unsigned, fd, off_t, offset, unsigned, origin)
@@ -632,7 +496,6 @@ sys_truncate(struct tcb *tcp)
 	return 0;
 }
 
-#if _LFS64_LARGEFILE
 int
 sys_truncate64(struct tcb *tcp)
 {
@@ -642,7 +505,6 @@ sys_truncate64(struct tcb *tcp)
 	}
 	return 0;
 }
-#endif
 
 int
 sys_ftruncate(struct tcb *tcp)
@@ -654,7 +516,6 @@ sys_ftruncate(struct tcb *tcp)
 	return 0;
 }
 
-#if _LFS64_LARGEFILE
 int
 sys_ftruncate64(struct tcb *tcp)
 {
@@ -664,20 +525,10 @@ sys_ftruncate64(struct tcb *tcp)
 	}
 	return 0;
 }
-#endif
 
 /* several stats */
 
-static const struct xlat modetypes[] = {
-	{ S_IFREG,	"S_IFREG"	},
-	{ S_IFSOCK,	"S_IFSOCK"	},
-	{ S_IFIFO,	"S_IFIFO"	},
-	{ S_IFLNK,	"S_IFLNK"	},
-	{ S_IFDIR,	"S_IFDIR"	},
-	{ S_IFBLK,	"S_IFBLK"	},
-	{ S_IFCHR,	"S_IFCHR"	},
-	{ 0,		NULL		},
-};
+#include "xlat/modetypes.h"
 
 static const char *
 sprintmode(int mode)
@@ -908,9 +759,7 @@ printstat_powerpc32(struct tcb *tcp, long addr)
 }
 #endif /* POWERPC64 */
 
-static const struct xlat fileflags[] = {
-	{ 0,		NULL		},
-};
+#include "xlat/fileflags.h"
 
 static void
 realprintstat(struct tcb *tcp, struct stat *statbuf)
@@ -1023,12 +872,16 @@ printstat(struct tcb *tcp, long addr)
 # define printstat printstat64
 #endif
 
-#if !defined HAVE_STAT64 && defined X86_64
+#if !defined HAVE_STAT64 && (defined AARCH64 || defined X86_64)
 /*
  * Linux x86_64 has unified `struct stat' but its i386 biarch needs
  * `struct stat64'.  Its <asm-i386/stat.h> definition expects 32-bit `long'.
  * <linux/include/asm-x86_64/ia32.h> is not in the public includes set.
  * __GNUC__ is needed for the required __attribute__ below.
+ *
+ * Similarly, aarch64 has a unified `struct stat' but its arm personality
+ * needs `struct stat64' (which also expects a 32-bit `long' but which
+ * shouldn't be packed).
  */
 struct stat64 {
 	unsigned long long	st_dev;
@@ -1050,9 +903,15 @@ struct stat64 {
 	unsigned int	st_ctime;
 	unsigned int	st_ctime_nsec;
 	unsigned long long	st_ino;
-} __attribute__((packed));
+}
+# if defined X86_64
+   __attribute__((packed))
+#  define STAT64_SIZE	96
+#else
+#  define STAT64_SIZE	104
+# endif
+;
 # define HAVE_STAT64	1
-# define STAT64_SIZE	96
 #endif
 
 #ifdef HAVE_STAT64
@@ -1091,6 +950,12 @@ printstat64(struct tcb *tcp, long addr)
 # endif
 #endif /* SPARC[64] */
 
+#if defined AARCH64
+	if (current_personality != 0) {
+		printstat(tcp, addr);
+		return;
+	}
+#endif
 #if defined X86_64
 	if (current_personality != 1) {
 		printstat(tcp, addr);
@@ -1104,18 +969,10 @@ printstat64(struct tcb *tcp, long addr)
 	}
 
 	if (!abbrev(tcp)) {
-#ifdef HAVE_LONG_LONG
 		tprintf("{st_dev=makedev(%lu, %lu), st_ino=%llu, st_mode=%s, ",
-#else
-		tprintf("{st_dev=makedev(%lu, %lu), st_ino=%lu, st_mode=%s, ",
-#endif
 			(unsigned long) major(statbuf.st_dev),
 			(unsigned long) minor(statbuf.st_dev),
-#ifdef HAVE_LONG_LONG
 			(unsigned long long) statbuf.st_ino,
-#else
-			(unsigned long) statbuf.st_ino,
-#endif
 			sprintmode(statbuf.st_mode));
 		tprintf("st_nlink=%lu, st_uid=%lu, st_gid=%lu, ",
 			(unsigned long) statbuf.st_nlink,
@@ -1144,11 +1001,7 @@ printstat64(struct tcb *tcp, long addr)
 #endif /* !HAVE_STRUCT_STAT_ST_RDEV */
 		break;
 	default:
-#ifdef HAVE_LONG_LONG
 		tprintf("st_size=%llu, ", (unsigned long long) statbuf.st_size);
-#else
-		tprintf("st_size=%lu, ", (unsigned long) statbuf.st_size);
-#endif
 		break;
 	}
 	if (!abbrev(tcp)) {
@@ -1335,14 +1188,7 @@ sys_stat64(struct tcb *tcp)
 # define AT_EMPTY_PATH		0x1000
 #endif
 
-static const struct xlat at_flags[] = {
-	{ AT_SYMLINK_NOFOLLOW,	"AT_SYMLINK_NOFOLLOW"	},
-	{ AT_REMOVEDIR,		"AT_REMOVEDIR"		},
-	{ AT_SYMLINK_FOLLOW,	"AT_SYMLINK_FOLLOW"	},
-	{ AT_NO_AUTOMOUNT,	"AT_NO_AUTOMOUNT"	},
-	{ AT_EMPTY_PATH,	"AT_EMPTY_PATH"		},
-	{ 0,			NULL			}
-};
+#include "xlat/at_flags.h"
 
 int
 sys_newfstatat(struct tcb *tcp)
@@ -1508,27 +1354,7 @@ sys_xmknod(struct tcb *tcp)
 
 #  include <sys/acl.h>
 
-static const struct xlat aclcmds[] = {
-#  ifdef SETACL
-	{ SETACL,	"SETACL"	},
-#  endif
-#  ifdef GETACL
-	{ GETACL,	"GETACL"	},
-#  endif
-#  ifdef GETACLCNT
-	{ GETACLCNT,	"GETACLCNT"	},
-#  endif
-#  ifdef ACL_GET
-	{ ACL_GET,	"ACL_GET"	},
-#  endif
-#  ifdef ACL_SET
-	{ ACL_SET,	"ACL_SET"	},
-#  endif
-#  ifdef ACL_CNT
-	{ ACL_CNT,	"ACL_CNT"	},
-#  endif
-	{ 0,		NULL		},
-};
+#include "xlat/aclcmds.h"
 
 int
 sys_acl(struct tcb *tcp)
@@ -1569,18 +1395,7 @@ sys_facl(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat aclipc[] = {
-#  ifdef IPC_SHM
-	{ IPC_SHM,	"IPC_SHM"	},
-#  endif
-#  ifdef IPC_SEM
-	{ IPC_SEM,	"IPC_SEM"	},
-#  endif
-#  ifdef IPC_MSG
-	{ IPC_MSG,	"IPC_MSG"	},
-#  endif
-	{ 0,		NULL		},
-};
+#include "xlat/aclipc.h"
 
 int
 sys_aclipc(struct tcb *tcp)
@@ -1606,38 +1421,7 @@ sys_aclipc(struct tcb *tcp)
 
 #endif /* SPARC[64] */
 
-static const struct xlat fsmagic[] = {
-	{ 0x73757245,	"CODA_SUPER_MAGIC"	},
-	{ 0x012ff7b7,	"COH_SUPER_MAGIC"	},
-	{ 0x1373,	"DEVFS_SUPER_MAGIC"	},
-	{ 0x1cd1,	"DEVPTS_SUPER_MAGIC"	},
-	{ 0x414A53,	"EFS_SUPER_MAGIC"	},
-	{ 0xef51,	"EXT2_OLD_SUPER_MAGIC"	},
-	{ 0xef53,	"EXT2_SUPER_MAGIC"	},
-	{ 0x137d,	"EXT_SUPER_MAGIC"	},
-	{ 0xf995e849,	"HPFS_SUPER_MAGIC"	},
-	{ 0x9660,	"ISOFS_SUPER_MAGIC"	},
-	{ 0x137f,	"MINIX_SUPER_MAGIC"	},
-	{ 0x138f,	"MINIX_SUPER_MAGIC2"	},
-	{ 0x2468,	"MINIX2_SUPER_MAGIC"	},
-	{ 0x2478,	"MINIX2_SUPER_MAGIC2"	},
-	{ 0x4d44,	"MSDOS_SUPER_MAGIC"	},
-	{ 0x564c,	"NCP_SUPER_MAGIC"	},
-	{ 0x6969,	"NFS_SUPER_MAGIC"	},
-	{ 0x9fa0,	"PROC_SUPER_MAGIC"	},
-	{ 0x002f,	"QNX4_SUPER_MAGIC"	},
-	{ 0x52654973,	"REISERFS_SUPER_MAGIC"	},
-	{ 0x02011994,	"SHMFS_SUPER_MAGIC"	},
-	{ 0x517b,	"SMB_SUPER_MAGIC"	},
-	{ 0x012ff7b6,	"SYSV2_SUPER_MAGIC"	},
-	{ 0x012ff7b5,	"SYSV4_SUPER_MAGIC"	},
-	{ 0x00011954,	"UFS_MAGIC"		},
-	{ 0x54190100,	"UFS_CIGAM"		},
-	{ 0x012ff7b4,	"XENIX_SUPER_MAGIC"	},
-	{ 0x012fd16d,	"XIAFS_SUPER_MAGIC"	},
-	{ 0x62656572,	"SYSFS_MAGIC"		},
-	{ 0,		NULL			},
-};
+#include "xlat/fsmagic.h"
 
 static const char *
 sprintfstype(int magic)
@@ -1983,15 +1767,34 @@ sys_readlinkat(struct tcb *tcp)
 	return decode_readlink(tcp, 1);
 }
 
+static void
+decode_renameat(struct tcb *tcp)
+{
+	print_dirfd(tcp, tcp->u_arg[0]);
+	printpath(tcp, tcp->u_arg[1]);
+	tprints(", ");
+	print_dirfd(tcp, tcp->u_arg[2]);
+	printpath(tcp, tcp->u_arg[3]);
+}
+
 int
 sys_renameat(struct tcb *tcp)
 {
 	if (entering(tcp)) {
-		print_dirfd(tcp, tcp->u_arg[0]);
-		printpath(tcp, tcp->u_arg[1]);
+		decode_renameat(tcp);
+	}
+	return 0;
+}
+
+#include "xlat/rename_flags.h"
+
+int
+sys_renameat2(struct tcb *tcp)
+{
+	if (entering(tcp)) {
+		decode_renameat(tcp);
 		tprints(", ");
-		print_dirfd(tcp, tcp->u_arg[2]);
-		printpath(tcp, tcp->u_arg[3]);
+		printflags(rename_flags, tcp->u_arg[4], "RENAME_??");
 	}
 	return 0;
 }
@@ -2252,18 +2055,7 @@ sys_readdir(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat direnttypes[] = {
-	{ DT_UNKNOWN,	"DT_UNKNOWN"	},
-	{ DT_FIFO,	"DT_FIFO"	},
-	{ DT_CHR,	"DT_CHR"	},
-	{ DT_DIR,	"DT_DIR"	},
-	{ DT_BLK,	"DT_BLK"	},
-	{ DT_REG,	"DT_REG"	},
-	{ DT_LNK,	"DT_LNK"	},
-	{ DT_SOCK,	"DT_SOCK"	},
-	{ DT_WHT,	"DT_WHT"	},
-	{ 0,		NULL		},
-};
+#include "xlat/direnttypes.h"
 
 int
 sys_getdents(struct tcb *tcp)
@@ -2322,7 +2114,6 @@ sys_getdents(struct tcb *tcp)
 	return 0;
 }
 
-#if _LFS64_LARGEFILE
 int
 sys_getdents64(struct tcb *tcp)
 {
@@ -2384,7 +2175,6 @@ sys_getdents64(struct tcb *tcp)
 	free(buf);
 	return 0;
 }
-#endif
 
 int
 sys_getcwd(struct tcb *tcp)
@@ -2477,13 +2267,7 @@ sys_aiocancel(struct tcb *tcp)
 
 #endif /* HAVE_SYS_ASYNCH_H */
 
-static const struct xlat xattrflags[] = {
-#ifdef XATTR_CREATE
-	{ XATTR_CREATE,	 "XATTR_CREATE" },
-	{ XATTR_REPLACE, "XATTR_REPLACE" },
-#endif
-	{ 0,		 NULL }
-};
+#include "xlat/xattrflags.h"
 
 static void
 print_xattr_val(struct tcb *tcp, int failed,
@@ -2646,15 +2430,7 @@ sys_fremovexattr(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat advise[] = {
-	{ POSIX_FADV_NORMAL,		"POSIX_FADV_NORMAL"	},
-	{ POSIX_FADV_RANDOM,		"POSIX_FADV_RANDOM"	},
-	{ POSIX_FADV_SEQUENTIAL,	"POSIX_FADV_SEQUENTIAL"	},
-	{ POSIX_FADV_WILLNEED,		"POSIX_FADV_WILLNEED"	},
-	{ POSIX_FADV_DONTNEED,		"POSIX_FADV_DONTNEED"	},
-	{ POSIX_FADV_NOREUSE,		"POSIX_FADV_NOREUSE"	},
-	{ 0,				NULL			}
-};
+#include "xlat/advise.h"
 
 int
 sys_fadvise64(struct tcb *tcp)
@@ -2686,64 +2462,33 @@ sys_fadvise64_64(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat inotify_modes[] = {
-	{ 0x00000001,	"IN_ACCESS"	},
-	{ 0x00000002,	"IN_MODIFY"	},
-	{ 0x00000004,	"IN_ATTRIB"	},
-	{ 0x00000008,	"IN_CLOSE_WRITE"},
-	{ 0x00000010,	"IN_CLOSE_NOWRITE"},
-	{ 0x00000020,	"IN_OPEN"	},
-	{ 0x00000040,	"IN_MOVED_FROM"	},
-	{ 0x00000080,	"IN_MOVED_TO"	},
-	{ 0x00000100,	"IN_CREATE"	},
-	{ 0x00000200,	"IN_DELETE"	},
-	{ 0x00000400,	"IN_DELETE_SELF"},
-	{ 0x00000800,	"IN_MOVE_SELF"	},
-	{ 0x00002000,	"IN_UNMOUNT"	},
-	{ 0x00004000,	"IN_Q_OVERFLOW"	},
-	{ 0x00008000,	"IN_IGNORED"	},
-	{ 0x01000000,	"IN_ONLYDIR"	},
-	{ 0x02000000,	"IN_DONT_FOLLOW"},
-	{ 0x20000000,	"IN_MASK_ADD"	},
-	{ 0x40000000,	"IN_ISDIR"	},
-	{ 0x80000000,	"IN_ONESHOT"	},
-	{ 0,		NULL		}
-};
-
-static const struct xlat inotify_init_flags[] = {
-	{ 0x00000800,	"IN_NONBLOCK"	},
-	{ 0x00080000,	"IN_CLOEXEC"	},
-	{ 0,		NULL		}
-};
+#include "xlat/sync_file_range_flags.h"
 
 int
-sys_inotify_add_watch(struct tcb *tcp)
+sys_sync_file_range(struct tcb *tcp)
 {
 	if (entering(tcp)) {
+		int argn;
 		printfd(tcp, tcp->u_arg[0]);
-		tprints(", ");
-		printpath(tcp, tcp->u_arg[1]);
-		tprints(", ");
-		printflags(inotify_modes, tcp->u_arg[2], "IN_???");
+		argn = printllval(tcp, ", %lld, ", 1);
+		argn = printllval(tcp, "%lld, ", argn);
+		printflags(sync_file_range_flags, tcp->u_arg[argn],
+		           "SYNC_FILE_RANGE_???");
 	}
 	return 0;
 }
 
 int
-sys_inotify_rm_watch(struct tcb *tcp)
+sys_sync_file_range2(struct tcb *tcp)
 {
 	if (entering(tcp)) {
+		int argn;
 		printfd(tcp, tcp->u_arg[0]);
-		tprintf(", %d", (int) tcp->u_arg[1]);
+		printflags(sync_file_range_flags, 1,
+		           "SYNC_FILE_RANGE_???");
+		argn = printllval(tcp, ", %lld, ", 2);
+		argn = printllval(tcp, "%lld, ", argn);
 	}
-	return 0;
-}
-
-int
-sys_inotify_init1(struct tcb *tcp)
-{
-	if (entering(tcp))
-		printflags(inotify_init_flags, tcp->u_arg[0], "IN_???");
 	return 0;
 }
 
@@ -2766,11 +2511,7 @@ sys_fallocate(struct tcb *tcp)
 #ifndef SWAP_FLAG_DISCARD
 # define SWAP_FLAG_DISCARD 0x10000
 #endif
-static const struct xlat swap_flags[] = {
-	{ SWAP_FLAG_PREFER,	"SWAP_FLAG_PREFER"	},
-	{ SWAP_FLAG_DISCARD,	"SWAP_FLAG_DISCARD"	},
-	{ 0,			NULL			}
-};
+#include "xlat/swap_flags.h"
 
 int
 sys_swapon(struct tcb *tcp)

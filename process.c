@@ -47,12 +47,6 @@
 
 #ifdef HAVE_SYS_REG_H
 # include <sys/reg.h>
-# ifndef PTRACE_PEEKUSR
-#  define PTRACE_PEEKUSR PTRACE_PEEKUSER
-# endif
-# ifndef PTRACE_POKEUSR
-#  define PTRACE_POKEUSR PTRACE_POKEUSER
-# endif
 #endif
 
 #ifdef HAVE_LINUX_PTRACE_H
@@ -63,7 +57,11 @@
 # ifdef HAVE_STRUCT_PT_ALL_USER_REGS
 #  define pt_all_user_regs XXX_pt_all_user_regs
 # endif
+# ifdef HAVE_STRUCT_PTRACE_PEEKSIGINFO_ARGS
+#  define ptrace_peeksiginfo_args XXX_ptrace_peeksiginfo_args
+# endif
 # include <linux/ptrace.h>
+# undef ptrace_peeksiginfo_args
 # undef ia64_fpreg
 # undef pt_all_user_regs
 #endif
@@ -107,178 +105,7 @@
 #ifdef HAVE_PRCTL
 # include <sys/prctl.h>
 
-static const struct xlat prctl_options[] = {
-#ifdef PR_MAXPROCS
-	{ PR_MAXPROCS,		"PR_MAXPROCS"		},
-#endif
-#ifdef PR_ISBLOCKED
-	{ PR_ISBLOCKED,		"PR_ISBLOCKED"		},
-#endif
-#ifdef PR_SETSTACKSIZE
-	{ PR_SETSTACKSIZE,	"PR_SETSTACKSIZE"	},
-#endif
-#ifdef PR_GETSTACKSIZE
-	{ PR_GETSTACKSIZE,	"PR_GETSTACKSIZE"	},
-#endif
-#ifdef PR_MAXPPROCS
-	{ PR_MAXPPROCS,		"PR_MAXPPROCS"		},
-#endif
-#ifdef PR_UNBLKONEXEC
-	{ PR_UNBLKONEXEC,	"PR_UNBLKONEXEC"	},
-#endif
-#ifdef PR_ATOMICSIM
-	{ PR_ATOMICSIM,		"PR_ATOMICSIM"		},
-#endif
-#ifdef PR_SETEXITSIG
-	{ PR_SETEXITSIG,	"PR_SETEXITSIG"		},
-#endif
-#ifdef PR_RESIDENT
-	{ PR_RESIDENT,		"PR_RESIDENT"		},
-#endif
-#ifdef PR_ATTACHADDR
-	{ PR_ATTACHADDR,	"PR_ATTACHADDR"		},
-#endif
-#ifdef PR_DETACHADDR
-	{ PR_DETACHADDR,	"PR_DETACHADDR"		},
-#endif
-#ifdef PR_TERMCHILD
-	{ PR_TERMCHILD,		"PR_TERMCHILD"		},
-#endif
-#ifdef PR_GETSHMASK
-	{ PR_GETSHMASK,		"PR_GETSHMASK"		},
-#endif
-#ifdef PR_GETNSHARE
-	{ PR_GETNSHARE,		"PR_GETNSHARE"		},
-#endif
-#ifdef PR_COREPID
-	{ PR_COREPID,		"PR_COREPID"		},
-#endif
-#ifdef PR_ATTACHADDRPERM
-	{ PR_ATTACHADDRPERM,	"PR_ATTACHADDRPERM"	},
-#endif
-#ifdef PR_PTHREADEXIT
-	{ PR_PTHREADEXIT,	"PR_PTHREADEXIT"	},
-#endif
-
-#ifdef PR_SET_PDEATHSIG
-	{ PR_SET_PDEATHSIG,	"PR_SET_PDEATHSIG"	},
-#endif
-#ifdef PR_GET_PDEATHSIG
-	{ PR_GET_PDEATHSIG,	"PR_GET_PDEATHSIG"	},
-#endif
-#ifdef PR_GET_DUMPABLE
-	{ PR_GET_DUMPABLE,	"PR_GET_DUMPABLE"	},
-#endif
-#ifdef PR_SET_DUMPABLE
-	{ PR_SET_DUMPABLE,	"PR_SET_DUMPABLE"	},
-#endif
-#ifdef PR_GET_UNALIGN
-	{ PR_GET_UNALIGN,	"PR_GET_UNALIGN"	},
-#endif
-#ifdef PR_SET_UNALIGN
-	{ PR_SET_UNALIGN,	"PR_SET_UNALIGN"	},
-#endif
-#ifdef PR_GET_KEEPCAPS
-	{ PR_GET_KEEPCAPS,	"PR_GET_KEEPCAPS"	},
-#endif
-#ifdef PR_SET_KEEPCAPS
-	{ PR_SET_KEEPCAPS,	"PR_SET_KEEPCAPS"	},
-#endif
-#ifdef PR_GET_FPEMU
-	{ PR_GET_FPEMU,		"PR_GET_FPEMU"		},
-#endif
-#ifdef PR_SET_FPEMU
-	{ PR_SET_FPEMU,		"PR_SET_FPEMU"		},
-#endif
-#ifdef PR_GET_FPEXC
-	{ PR_GET_FPEXC,		"PR_GET_FPEXC"		},
-#endif
-#ifdef PR_SET_FPEXC
-	{ PR_SET_FPEXC,		"PR_SET_FPEXC"		},
-#endif
-#ifdef PR_GET_TIMING
-	{ PR_GET_TIMING,	"PR_GET_TIMING"		},
-#endif
-#ifdef PR_SET_TIMING
-	{ PR_SET_TIMING,	"PR_SET_TIMING"		},
-#endif
-#ifdef PR_SET_NAME
-	{ PR_SET_NAME,		"PR_SET_NAME"		},
-#endif
-#ifdef PR_GET_NAME
-	{ PR_GET_NAME,		"PR_GET_NAME"		},
-#endif
-#ifdef PR_GET_ENDIAN
-	{ PR_GET_ENDIAN,	"PR_GET_ENDIAN"		},
-#endif
-#ifdef PR_SET_ENDIAN
-	{ PR_SET_ENDIAN,	"PR_SET_ENDIAN"		},
-#endif
-#ifdef PR_GET_SECCOMP
-	{ PR_GET_SECCOMP,	"PR_GET_SECCOMP"	},
-#endif
-#ifdef PR_SET_SECCOMP
-	{ PR_SET_SECCOMP,	"PR_SET_SECCOMP"	},
-#endif
-#ifdef PR_CAPBSET_READ
-	{ PR_CAPBSET_READ,	"PR_CAPBSET_READ"	},
-#endif
-#ifdef PR_CAPBSET_DROP
-	{ PR_CAPBSET_DROP,	"PR_CAPBSET_DROP"	},
-#endif
-#ifdef PR_GET_TSC
-	{ PR_GET_TSC,		"PR_GET_TSC"		},
-#endif
-#ifdef PR_SET_TSC
-	{ PR_SET_TSC,		"PR_SET_TSC"		},
-#endif
-#ifdef PR_GET_SECUREBITS
-	{ PR_GET_SECUREBITS,	"PR_GET_SECUREBITS"	},
-#endif
-#ifdef PR_SET_SECUREBITS
-	{ PR_SET_SECUREBITS,	"PR_SET_SECUREBITS"	},
-#endif
-#ifdef PR_SET_TIMERSLACK
-	{ PR_SET_TIMERSLACK,	"PR_SET_TIMERSLACK"	},
-#endif
-#ifdef PR_GET_TIMERSLACK
-	{ PR_GET_TIMERSLACK,	"PR_GET_TIMERSLACK"	},
-#endif
-#ifdef PR_TASK_PERF_EVENTS_DISABLE
-	{ PR_TASK_PERF_EVENTS_DISABLE,	"PR_TASK_PERF_EVENTS_DISABLE"	},
-#endif
-#ifdef PR_TASK_PERF_EVENTS_ENABLE
-	{ PR_TASK_PERF_EVENTS_ENABLE,	"PR_TASK_PERF_EVENTS_ENABLE"	},
-#endif
-#ifdef PR_MCE_KILL
-	{ PR_MCE_KILL,		"PR_MCE_KILL"		},
-#endif
-#ifdef PR_MCE_KILL_GET
-	{ PR_MCE_KILL_GET,	"PR_MCE_KILL_GET"	},
-#endif
-#ifdef PR_SET_MM
-	{ PR_SET_MM,		"PR_SET_MM"		},
-#endif
-#ifdef PR_SET_PTRACER
-	{ PR_SET_PTRACER,	"PR_SET_PTRACER"	},
-#endif
-#ifdef PR_SET_CHILD_SUBREAPER
-	{ PR_SET_CHILD_SUBREAPER,	"PR_SET_CHILD_SUBREAPER"	},
-#endif
-#ifdef PR_GET_CHILD_SUBREAPER
-	{ PR_GET_CHILD_SUBREAPER,	"PR_GET_CHILD_SUBREAPER"	},
-#endif
-#ifdef PR_SET_NO_NEW_PRIVS
-	{ PR_SET_NO_NEW_PRIVS,	"PR_SET_NO_NEW_PRIVS"	},
-#endif
-#ifdef PR_GET_NO_NEW_PRIVS
-	{ PR_GET_NO_NEW_PRIVS,	"PR_GET_NO_NEW_PRIVS"	},
-#endif
-#ifdef PR_GET_TID_ADDRESS
-	{ PR_GET_TID_ADDRESS,	"PR_GET_TID_ADDRESS"	},
-#endif
-	{ 0,			NULL			},
-};
+#include "xlat/prctl_options.h"
 
 static const char *
 unalignctl_string(unsigned int ctl)
@@ -392,7 +219,7 @@ int
 sys_sethostname(struct tcb *tcp)
 {
 	if (entering(tcp)) {
-		printpathn(tcp, tcp->u_arg[0], tcp->u_arg[1]);
+		printstr(tcp, tcp->u_arg[0], tcp->u_arg[1]);
 		tprintf(", %lu", tcp->u_arg[1]);
 	}
 	return 0;
@@ -406,7 +233,7 @@ sys_gethostname(struct tcb *tcp)
 		if (syserror(tcp))
 			tprintf("%#lx", tcp->u_arg[0]);
 		else
-			printpath(tcp, tcp->u_arg[0]);
+			printstr(tcp, tcp->u_arg[0], -1);
 		tprintf(", %lu", tcp->u_arg[1]);
 	}
 	return 0;
@@ -417,7 +244,7 @@ int
 sys_setdomainname(struct tcb *tcp)
 {
 	if (entering(tcp)) {
-		printpathn(tcp, tcp->u_arg[0], tcp->u_arg[1]);
+		printstr(tcp, tcp->u_arg[0], tcp->u_arg[1]);
 		tprintf(", %lu", tcp->u_arg[1]);
 	}
 	return 0;
@@ -466,40 +293,11 @@ sys_exit(struct tcb *tcp)
 #define CLONE_NEWNET		0x40000000	/* New network namespace */
 #define CLONE_IO		0x80000000	/* Clone io context */
 
-static const struct xlat clone_flags[] = {
-	{ CLONE_VM,		"CLONE_VM"	},
-	{ CLONE_FS,		"CLONE_FS"	},
-	{ CLONE_FILES,		"CLONE_FILES"	},
-	{ CLONE_SIGHAND,	"CLONE_SIGHAND"	},
-	{ CLONE_IDLETASK,	"CLONE_IDLETASK" },
-	{ CLONE_PTRACE,		"CLONE_PTRACE"	},
-	{ CLONE_VFORK,		"CLONE_VFORK"	},
-	{ CLONE_PARENT,		"CLONE_PARENT"	},
-	{ CLONE_THREAD,		"CLONE_THREAD"	},
-	{ CLONE_NEWNS,		"CLONE_NEWNS"	},
-	{ CLONE_SYSVSEM,	"CLONE_SYSVSEM"	},
-	{ CLONE_SETTLS,		"CLONE_SETTLS"	},
-	{ CLONE_PARENT_SETTID,	"CLONE_PARENT_SETTID" },
-	{ CLONE_CHILD_CLEARTID,	"CLONE_CHILD_CLEARTID" },
-	{ CLONE_UNTRACED,	"CLONE_UNTRACED" },
-	{ CLONE_CHILD_SETTID,	"CLONE_CHILD_SETTID" },
-	{ CLONE_STOPPED,	"CLONE_STOPPED"	},
-	{ CLONE_NEWUTS,		"CLONE_NEWUTS"	},
-	{ CLONE_NEWIPC,		"CLONE_NEWIPC"	},
-	{ CLONE_NEWUSER,	"CLONE_NEWUSER"	},
-	{ CLONE_NEWPID,		"CLONE_NEWPID"	},
-	{ CLONE_NEWNET,		"CLONE_NEWNET"	},
-	{ CLONE_IO,		"CLONE_IO"	},
-	{ 0,			NULL		},
-};
+#include "xlat/clone_flags.h"
 
-#ifdef I386
-# include <asm/ldt.h>
-#  ifdef HAVE_STRUCT_USER_DESC
-#   define modify_ldt_ldt_s user_desc
-#  endif
-extern void print_ldt_entry();
-#endif
+#if defined I386 || defined X86_64 || defined X32
+extern void print_user_desc(struct tcb *, long);
+#endif /* I386 || X86_64 || X32 */
 
 #if defined IA64
 # define ARG_FLAGS	0
@@ -514,8 +312,14 @@ extern void print_ldt_entry();
 # define ARG_PTID	2
 # define ARG_CTID	3
 # define ARG_TLS	4
-#elif defined X86_64 || defined X32 || defined ALPHA || defined TILE \
-   || defined OR1K
+#elif defined X86_64 || defined X32
+/* x86 personality processes have the last two arguments flipped. */
+# define ARG_FLAGS	0
+# define ARG_STACK	1
+# define ARG_PTID	2
+# define ARG_CTID	((current_personality != 1) ? 3 : 4)
+# define ARG_TLS	((current_personality != 1) ? 4 : 3)
+#elif defined ALPHA || defined TILE || defined OR1K
 # define ARG_FLAGS	0
 # define ARG_STACK	1
 # define ARG_PTID	2
@@ -552,22 +356,45 @@ sys_clone(struct tcb *tcp)
 		if (flags & CLONE_PARENT_SETTID)
 			tprintf(", parent_tidptr=%#lx", tcp->u_arg[ARG_PTID]);
 		if (flags & CLONE_SETTLS) {
-#ifdef I386
-			struct modify_ldt_ldt_s copy;
-			if (umove(tcp, tcp->u_arg[ARG_TLS], &copy) != -1) {
-				tprintf(", {entry_number:%d, ",
-					copy.entry_number);
-				if (!verbose(tcp))
-					tprints("...}");
-				else
-					print_ldt_entry(&copy);
+#if defined I386 || defined X86_64 || defined X32
+# ifndef I386
+			if (current_personality == 1)
+# endif
+			{
+				tprints(", tls=");
+				print_user_desc(tcp, tcp->u_arg[ARG_TLS]);
 			}
+# ifndef I386
 			else
-#endif
+# endif
+#endif /* I386 || X86_64 || X32 */
 				tprintf(", tls=%#lx", tcp->u_arg[ARG_TLS]);
 		}
 		if (flags & (CLONE_CHILD_SETTID|CLONE_CHILD_CLEARTID))
 			tprintf(", child_tidptr=%#lx", tcp->u_arg[ARG_CTID]);
+	}
+	/* TODO on syscall entry:
+	 * We can clear CLONE_PTRACE here since it is an ancient hack
+	 * to allow us to catch children, and we use another hack for that.
+	 * But CLONE_PTRACE can conceivably be used by malicious programs
+	 * to subvert us. By clearing this bit, we can defend against it:
+	 * in untraced execution, CLONE_PTRACE should have no effect.
+	 *
+	 * We can also clear CLONE_UNTRACED, since it allows to start
+	 * children outside of our control. At the moment
+	 * I'm trying to figure out whether there is a *legitimate*
+	 * use of this flag which we should respect.
+	 */
+	return 0;
+}
+
+int
+sys_setns(struct tcb *tcp)
+{
+	if (entering(tcp)) {
+		printfd(tcp, tcp->u_arg[0]);
+		tprints(", ");
+		printflags(clone_flags, tcp->u_arg[1], "CLONE_???");
 	}
 	return 0;
 }
@@ -582,14 +409,6 @@ sys_unshare(struct tcb *tcp)
 
 int
 sys_fork(struct tcb *tcp)
-{
-	if (exiting(tcp))
-		return RVAL_UDECIMAL;
-	return 0;
-}
-
-int
-sys_vfork(struct tcb *tcp)
 {
 	if (exiting(tcp))
 		return RVAL_UDECIMAL;
@@ -993,37 +812,7 @@ sys_execve(struct tcb *tcp)
 #define __WCLONE	0x80000000
 #endif
 
-static const struct xlat wait4_options[] = {
-	{ WNOHANG,	"WNOHANG"	},
-#ifndef WSTOPPED
-	{ WUNTRACED,	"WUNTRACED"	},
-#endif
-#ifdef WEXITED
-	{ WEXITED,	"WEXITED"	},
-#endif
-#ifdef WTRAPPED
-	{ WTRAPPED,	"WTRAPPED"	},
-#endif
-#ifdef WSTOPPED
-	{ WSTOPPED,	"WSTOPPED"	},
-#endif
-#ifdef WCONTINUED
-	{ WCONTINUED,	"WCONTINUED"	},
-#endif
-#ifdef WNOWAIT
-	{ WNOWAIT,	"WNOWAIT"	},
-#endif
-#ifdef __WCLONE
-	{ __WCLONE,	"__WCLONE"	},
-#endif
-#ifdef __WALL
-	{ __WALL,	"__WALL"	},
-#endif
-#ifdef __WNOTHREAD
-	{ __WNOTHREAD,	"__WNOTHREAD"	},
-#endif
-	{ 0,		NULL		},
-};
+#include "xlat/wait4_options.h"
 
 #if !defined WCOREFLAG && defined WCOREFLG
 # define WCOREFLAG WCOREFLG
@@ -1148,30 +937,7 @@ sys_osf_wait4(struct tcb *tcp)
 }
 #endif
 
-static const struct xlat waitid_types[] = {
-	{ P_PID,	"P_PID"		},
-#ifdef P_PPID
-	{ P_PPID,	"P_PPID"	},
-#endif
-	{ P_PGID,	"P_PGID"	},
-#ifdef P_SID
-	{ P_SID,	"P_SID"		},
-#endif
-#ifdef P_CID
-	{ P_CID,	"P_CID"		},
-#endif
-#ifdef P_UID
-	{ P_UID,	"P_UID"		},
-#endif
-#ifdef P_GID
-	{ P_GID,	"P_GID"		},
-#endif
-	{ P_ALL,	"P_ALL"		},
-#ifdef P_LWPID
-	{ P_LWPID,	"P_LWPID"	},
-#endif
-	{ 0,		NULL		},
-};
+#include "xlat/waitid_types.h"
 
 int
 sys_waitid(struct tcb *tcp)
@@ -1228,183 +994,9 @@ sys_uname(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat ptrace_cmds[] = {
-	{ PTRACE_TRACEME,	"PTRACE_TRACEME"	},
-	{ PTRACE_PEEKTEXT,	"PTRACE_PEEKTEXT"	},
-	{ PTRACE_PEEKDATA,	"PTRACE_PEEKDATA"	},
-	{ PTRACE_PEEKUSER,	"PTRACE_PEEKUSER"	},
-	{ PTRACE_POKETEXT,	"PTRACE_POKETEXT"	},
-	{ PTRACE_POKEDATA,	"PTRACE_POKEDATA"	},
-	{ PTRACE_POKEUSER,	"PTRACE_POKEUSER"	},
-	{ PTRACE_CONT,		"PTRACE_CONT"		},
-	{ PTRACE_KILL,		"PTRACE_KILL"		},
-	{ PTRACE_SINGLESTEP,	"PTRACE_SINGLESTEP"	},
-	{ PTRACE_ATTACH,	"PTRACE_ATTACH"		},
-	{ PTRACE_DETACH,	"PTRACE_DETACH"		},
-#ifdef PTRACE_GETREGS
-	{ PTRACE_GETREGS,	"PTRACE_GETREGS"	},
-#endif
-#ifdef PTRACE_SETREGS
-	{ PTRACE_SETREGS,	"PTRACE_SETREGS"	},
-#endif
-#ifdef PTRACE_GETFPREGS
-	{ PTRACE_GETFPREGS,	"PTRACE_GETFPREGS"	},
-#endif
-#ifdef PTRACE_SETFPREGS
-	{ PTRACE_SETFPREGS,	"PTRACE_SETFPREGS"	},
-#endif
-#ifdef PTRACE_GETFPXREGS
-	{ PTRACE_GETFPXREGS,	"PTRACE_GETFPXREGS"	},
-#endif
-#ifdef PTRACE_SETFPXREGS
-	{ PTRACE_SETFPXREGS,	"PTRACE_SETFPXREGS"	},
-#endif
-#ifdef PTRACE_GETVRREGS
-	{ PTRACE_GETVRREGS,	"PTRACE_GETVRREGS"	},
-#endif
-#ifdef PTRACE_SETVRREGS
-	{ PTRACE_SETVRREGS,	"PTRACE_SETVRREGS"	},
-#endif
-#ifdef PTRACE_SETOPTIONS
-	{ PTRACE_SETOPTIONS,	"PTRACE_SETOPTIONS"	},
-#endif
-#ifdef PTRACE_GETEVENTMSG
-	{ PTRACE_GETEVENTMSG,	"PTRACE_GETEVENTMSG"	},
-#endif
-#ifdef PTRACE_GETSIGINFO
-	{ PTRACE_GETSIGINFO,	"PTRACE_GETSIGINFO"	},
-#endif
-#ifdef PTRACE_SETSIGINFO
-	{ PTRACE_SETSIGINFO,	"PTRACE_SETSIGINFO"	},
-#endif
-#ifdef PTRACE_GETREGSET
-	{ PTRACE_GETREGSET,	"PTRACE_GETREGSET"	},
-#endif
-#ifdef PTRACE_SETREGSET
-	{ PTRACE_SETREGSET,	"PTRACE_SETREGSET"	},
-#endif
-#ifdef PTRACE_SET_SYSCALL
-	{ PTRACE_SET_SYSCALL,	"PTRACE_SET_SYSCALL"	},
-#endif
-#ifdef PTRACE_SEIZE
-	{ PTRACE_SEIZE,		"PTRACE_SEIZE"		},
-#endif
-#ifdef PTRACE_INTERRUPT
-	{ PTRACE_INTERRUPT,	"PTRACE_INTERRUPT"	},
-#endif
-#ifdef PTRACE_LISTEN
-	{ PTRACE_LISTEN,	"PTRACE_LISTEN"		},
-#endif
-	{ PTRACE_SYSCALL,	"PTRACE_SYSCALL"	},
-
-	{ 0,			NULL			},
-};
-
-#ifdef PTRACE_SETOPTIONS
-static const struct xlat ptrace_setoptions_flags[] = {
-# ifdef PTRACE_O_TRACESYSGOOD
-	{ PTRACE_O_TRACESYSGOOD,"PTRACE_O_TRACESYSGOOD"	},
-# endif
-# ifdef PTRACE_O_TRACEFORK
-	{ PTRACE_O_TRACEFORK,	"PTRACE_O_TRACEFORK"	},
-# endif
-# ifdef PTRACE_O_TRACEVFORK
-	{ PTRACE_O_TRACEVFORK,	"PTRACE_O_TRACEVFORK"	},
-# endif
-# ifdef PTRACE_O_TRACECLONE
-	{ PTRACE_O_TRACECLONE,	"PTRACE_O_TRACECLONE"	},
-# endif
-# ifdef PTRACE_O_TRACEEXEC
-	{ PTRACE_O_TRACEEXEC,	"PTRACE_O_TRACEEXEC"	},
-# endif
-# ifdef PTRACE_O_TRACEVFORKDONE
-	{ PTRACE_O_TRACEVFORKDONE,"PTRACE_O_TRACEVFORKDONE"},
-# endif
-# ifdef PTRACE_O_TRACEEXIT
-	{ PTRACE_O_TRACEEXIT,	"PTRACE_O_TRACEEXIT"	},
-# endif
-# ifdef PTRACE_O_TRACESECCOMP
-	{ PTRACE_O_TRACESECCOMP,"PTRACE_O_TRACESECCOMP"	},
-# endif
-# ifdef PTRACE_O_EXITKILL
-	{ PTRACE_O_EXITKILL,	"PTRACE_O_EXITKILL"	},
-# endif
-	{ 0,			NULL			},
-};
-#endif /* PTRACE_SETOPTIONS */
-
-static const struct xlat nt_descriptor_types[] = {
-#ifdef NT_PRSTATUS
-	{ NT_PRSTATUS,		"NT_PRSTATUS" },
-#endif
-#ifdef NT_FPREGSET
-	{ NT_FPREGSET,		"NT_FPREGSET" },
-#endif
-#ifdef NT_PRPSINFO
-	{ NT_PRPSINFO,		"NT_PRPSINFO" },
-#endif
-#ifdef NT_PRXREG
-	{ NT_PRXREG,		"NT_PRXREG" },
-#endif
-#ifdef NT_TASKSTRUCT
-	{ NT_TASKSTRUCT,	"NT_TASKSTRUCT" },
-#endif
-#ifdef NT_PLATFORM
-	{ NT_PLATFORM,		"NT_PLATFORM" },
-#endif
-#ifdef NT_AUXV
-	{ NT_AUXV,		"NT_AUXV" },
-#endif
-#ifdef NT_GWINDOWS
-	{ NT_GWINDOWS,		"NT_GWINDOWS" },
-#endif
-#ifdef NT_ASRS
-	{ NT_ASRS,		"NT_ASRS" },
-#endif
-#ifdef NT_PSTATUS
-	{ NT_PSTATUS,		"NT_PSTATUS" },
-#endif
-#ifdef NT_PSINFO
-	{ NT_PSINFO,		"NT_PSINFO" },
-#endif
-#ifdef NT_PRCRED
-	{ NT_PRCRED,		"NT_PRCRED" },
-#endif
-#ifdef NT_UTSNAME
-	{ NT_UTSNAME,		"NT_UTSNAME" },
-#endif
-#ifdef NT_LWPSTATUS
-	{ NT_LWPSTATUS,		"NT_LWPSTATUS" },
-#endif
-#ifdef NT_LWPSINFO
-	{ NT_LWPSINFO,		"NT_LWPSINFO" },
-#endif
-#ifdef NT_PRFPXREG
-	{ NT_PRFPXREG,		"NT_PRFPXREG" },
-#endif
-#ifdef NT_PRXFPREG
-	{ NT_PRXFPREG,		"NT_PRXFPREG" },
-#endif
-#ifdef NT_PPC_VMX
-	{ NT_PPC_VMX,		"NT_PPC_VMX" },
-#endif
-#ifdef NT_PPC_SPE
-	{ NT_PPC_SPE,		"NT_PPC_SPE" },
-#endif
-#ifdef NT_PPC_VSX
-	{ NT_PPC_VSX,		"NT_PPC_VSX" },
-#endif
-#ifdef NT_386_TLS
-	{ NT_386_TLS,		"NT_386_TLS" },
-#endif
-#ifdef NT_386_IOPERM
-	{ NT_386_IOPERM,	"NT_386_IOPERM" },
-#endif
-#ifdef NT_X86_XSTATE
-	{ NT_X86_XSTATE,	"NT_X86_XSTATE" },
-#endif
-	{ 0,			NULL },
-};
+#include "xlat/ptrace_cmds.h"
+#include "xlat/ptrace_setoptions_flags.h"
+#include "xlat/nt_descriptor_types.h"
 
 #define uoff(member)	offsetof(struct user, member)
 
@@ -1691,67 +1283,67 @@ const struct xlat struct_user_offsets[] = {
 # endif
 	{ PT_DBR, "dbr" }, { PT_IBR, "ibr" }, { PT_PMD, "pmd" },
 #elif defined(I386)
-	{ 4*EBX,		"4*EBX"					},
-	{ 4*ECX,		"4*ECX"					},
-	{ 4*EDX,		"4*EDX"					},
-	{ 4*ESI,		"4*ESI"					},
-	{ 4*EDI,		"4*EDI"					},
-	{ 4*EBP,		"4*EBP"					},
-	{ 4*EAX,		"4*EAX"					},
-	{ 4*DS,			"4*DS"					},
-	{ 4*ES,			"4*ES"					},
-	{ 4*FS,			"4*FS"					},
-	{ 4*GS,			"4*GS"					},
-	{ 4*ORIG_EAX,		"4*ORIG_EAX"				},
-	{ 4*EIP,		"4*EIP"					},
-	{ 4*CS,			"4*CS"					},
-	{ 4*EFL,		"4*EFL"					},
-	{ 4*UESP,		"4*UESP"				},
-	{ 4*SS,			"4*SS"					},
+	XLAT(4*EBX),
+	XLAT(4*ECX),
+	XLAT(4*EDX),
+	XLAT(4*ESI),
+	XLAT(4*EDI),
+	XLAT(4*EBP),
+	XLAT(4*EAX),
+	XLAT(4*DS),
+	XLAT(4*ES),
+	XLAT(4*FS),
+	XLAT(4*GS),
+	XLAT(4*ORIG_EAX),
+	XLAT(4*EIP),
+	XLAT(4*CS),
+	XLAT(4*EFL),
+	XLAT(4*UESP),
+	XLAT(4*SS),
 #elif defined(X86_64) || defined(X32)
-	{ 8*R15,		"8*R15"					},
-	{ 8*R14,		"8*R14"					},
-	{ 8*R13,		"8*R13"					},
-	{ 8*R12,		"8*R12"					},
-	{ 8*RBP,		"8*RBP"					},
-	{ 8*RBX,		"8*RBX"					},
-	{ 8*R11,		"8*R11"					},
-	{ 8*R10,		"8*R10"					},
-	{ 8*R9,			"8*R9"					},
-	{ 8*R8,			"8*R8"					},
-	{ 8*RAX,		"8*RAX"					},
-	{ 8*RCX,		"8*RCX"					},
-	{ 8*RDX,		"8*RDX"					},
-	{ 8*RSI,		"8*RSI"					},
-	{ 8*RDI,		"8*RDI"					},
-	{ 8*ORIG_RAX,		"8*ORIG_RAX"				},
-	{ 8*RIP,		"8*RIP"					},
-	{ 8*CS,			"8*CS"					},
+	XLAT(8*R15),
+	XLAT(8*R14),
+	XLAT(8*R13),
+	XLAT(8*R12),
+	XLAT(8*RBP),
+	XLAT(8*RBX),
+	XLAT(8*R11),
+	XLAT(8*R10),
+	XLAT(8*R9),
+	XLAT(8*R8),
+	XLAT(8*RAX),
+	XLAT(8*RCX),
+	XLAT(8*RDX),
+	XLAT(8*RSI),
+	XLAT(8*RDI),
+	XLAT(8*ORIG_RAX),
+	XLAT(8*RIP),
+	XLAT(8*CS),
 	{ 8*EFLAGS,		"8*EFL"					},
-	{ 8*RSP,		"8*RSP"					},
-	{ 8*SS,			"8*SS"					},
+	XLAT(8*RSP),
+	XLAT(8*SS),
 #elif defined(M68K)
-	{ 4*PT_D1,		"4*PT_D1"				},
-	{ 4*PT_D2,		"4*PT_D2"				},
-	{ 4*PT_D3,		"4*PT_D3"				},
-	{ 4*PT_D4,		"4*PT_D4"				},
-	{ 4*PT_D5,		"4*PT_D5"				},
-	{ 4*PT_D6,		"4*PT_D6"				},
-	{ 4*PT_D7,		"4*PT_D7"				},
-	{ 4*PT_A0,		"4*PT_A0"				},
-	{ 4*PT_A1,		"4*PT_A1"				},
-	{ 4*PT_A2,		"4*PT_A2"				},
-	{ 4*PT_A3,		"4*PT_A3"				},
-	{ 4*PT_A4,		"4*PT_A4"				},
-	{ 4*PT_A5,		"4*PT_A5"				},
-	{ 4*PT_A6,		"4*PT_A6"				},
-	{ 4*PT_D0,		"4*PT_D0"				},
-	{ 4*PT_USP,		"4*PT_USP"				},
-	{ 4*PT_ORIG_D0,		"4*PT_ORIG_D0"				},
-	{ 4*PT_SR,		"4*PT_SR"				},
-	{ 4*PT_PC,		"4*PT_PC"				},
+	XLAT(4*PT_D1),
+	XLAT(4*PT_D2),
+	XLAT(4*PT_D3),
+	XLAT(4*PT_D4),
+	XLAT(4*PT_D5),
+	XLAT(4*PT_D6),
+	XLAT(4*PT_D7),
+	XLAT(4*PT_A0),
+	XLAT(4*PT_A1),
+	XLAT(4*PT_A2),
+	XLAT(4*PT_A3),
+	XLAT(4*PT_A4),
+	XLAT(4*PT_A5),
+	XLAT(4*PT_A6),
+	XLAT(4*PT_D0),
+	XLAT(4*PT_USP),
+	XLAT(4*PT_ORIG_D0),
+	XLAT(4*PT_SR),
+	XLAT(4*PT_PC),
 #elif defined(SH)
-	{ 4*REG_REG0,		"4*REG_REG0"				},
+	XLAT(4*REG_REG0),
 	{ 4*(REG_REG0+1),	"4*REG_REG1"				},
 	{ 4*(REG_REG0+2),	"4*REG_REG2"				},
 	{ 4*(REG_REG0+3),	"4*REG_REG3"				},
@@ -1766,16 +1358,16 @@ const struct xlat struct_user_offsets[] = {
 	{ 4*(REG_REG0+12),	"4*REG_REG12"				},
 	{ 4*(REG_REG0+13),	"4*REG_REG13"				},
 	{ 4*(REG_REG0+14),	"4*REG_REG14"				},
-	{ 4*REG_REG15,		"4*REG_REG15"				},
-	{ 4*REG_PC,		"4*REG_PC"				},
-	{ 4*REG_PR,		"4*REG_PR"				},
-	{ 4*REG_SR,		"4*REG_SR"				},
-	{ 4*REG_GBR,		"4*REG_GBR"				},
-	{ 4*REG_MACH,		"4*REG_MACH"				},
-	{ 4*REG_MACL,		"4*REG_MACL"				},
-	{ 4*REG_SYSCALL,	"4*REG_SYSCALL"				},
-	{ 4*REG_FPUL,		"4*REG_FPUL"				},
-	{ 4*REG_FPREG0,		"4*REG_FPREG0"				},
+	XLAT(4*REG_REG15),
+	XLAT(4*REG_PC),
+	XLAT(4*REG_PR),
+	XLAT(4*REG_SR),
+	XLAT(4*REG_GBR),
+	XLAT(4*REG_MACH),
+	XLAT(4*REG_MACL),
+	XLAT(4*REG_SYSCALL),
+	XLAT(4*REG_FPUL),
+	XLAT(4*REG_FPREG0),
 	{ 4*(REG_FPREG0+1),	"4*REG_FPREG1"				},
 	{ 4*(REG_FPREG0+2),	"4*REG_FPREG2"				},
 	{ 4*(REG_FPREG0+3),	"4*REG_FPREG3"				},
@@ -1790,18 +1382,18 @@ const struct xlat struct_user_offsets[] = {
 	{ 4*(REG_FPREG0+12),	"4*REG_FPREG12"				},
 	{ 4*(REG_FPREG0+13),	"4*REG_FPREG13"				},
 	{ 4*(REG_FPREG0+14),	"4*REG_FPREG14"				},
-	{ 4*REG_FPREG15,	"4*REG_FPREG15"				},
+	XLAT(4*REG_FPREG15),
 # ifdef REG_XDREG0
-	{ 4*REG_XDREG0,		"4*REG_XDREG0"				},
+	XLAT(4*REG_XDREG0),
 	{ 4*(REG_XDREG0+2),	"4*REG_XDREG2"				},
 	{ 4*(REG_XDREG0+4),	"4*REG_XDREG4"				},
 	{ 4*(REG_XDREG0+6),	"4*REG_XDREG6"				},
 	{ 4*(REG_XDREG0+8),	"4*REG_XDREG8"				},
 	{ 4*(REG_XDREG0+10),	"4*REG_XDREG10"				},
 	{ 4*(REG_XDREG0+12),	"4*REG_XDREG12"				},
-	{ 4*REG_XDREG14,	"4*REG_XDREG14"				},
+	XLAT(4*REG_XDREG14),
 # endif
-	{ 4*REG_FPSCR,		"4*REG_FPSCR"				},
+	XLAT(4*REG_FPSCR),
 #elif defined(SH64)
 	{ 0,			"PC(L)"					},
 	{ 4,			"PC(U)"					},
@@ -2128,73 +1720,73 @@ const struct xlat struct_user_offsets[] = {
 	{ PTREGS_OFFSET_FLAGS, "flags" },
 #endif
 #ifdef CRISV10
-	{ 4*PT_FRAMETYPE, "4*PT_FRAMETYPE" },
-	{ 4*PT_ORIG_R10, "4*PT_ORIG_R10" },
-	{ 4*PT_R13, "4*PT_R13" },
-	{ 4*PT_R12, "4*PT_R12" },
-	{ 4*PT_R11, "4*PT_R11" },
-	{ 4*PT_R10, "4*PT_R10" },
-	{ 4*PT_R9, "4*PT_R9" },
-	{ 4*PT_R8, "4*PT_R8" },
-	{ 4*PT_R7, "4*PT_R7" },
-	{ 4*PT_R6, "4*PT_R6" },
-	{ 4*PT_R5, "4*PT_R5" },
-	{ 4*PT_R4, "4*PT_R4" },
-	{ 4*PT_R3, "4*PT_R3" },
-	{ 4*PT_R2, "4*PT_R2" },
-	{ 4*PT_R1, "4*PT_R1" },
-	{ 4*PT_R0, "4*PT_R0" },
-	{ 4*PT_MOF, "4*PT_MOF" },
-	{ 4*PT_DCCR, "4*PT_DCCR" },
-	{ 4*PT_SRP, "4*PT_SRP" },
-	{ 4*PT_IRP, "4*PT_IRP" },
-	{ 4*PT_CSRINSTR, "4*PT_CSRINSTR" },
-	{ 4*PT_CSRADDR, "4*PT_CSRADDR" },
-	{ 4*PT_CSRDATA, "4*PT_CSRDATA" },
-	{ 4*PT_USP, "4*PT_USP" },
+	XLAT(4*PT_FRAMETYPE),
+	XLAT(4*PT_ORIG_R10),
+	XLAT(4*PT_R13),
+	XLAT(4*PT_R12),
+	XLAT(4*PT_R11),
+	XLAT(4*PT_R10),
+	XLAT(4*PT_R9),
+	XLAT(4*PT_R8),
+	XLAT(4*PT_R7),
+	XLAT(4*PT_R6),
+	XLAT(4*PT_R5),
+	XLAT(4*PT_R4),
+	XLAT(4*PT_R3),
+	XLAT(4*PT_R2),
+	XLAT(4*PT_R1),
+	XLAT(4*PT_R0),
+	XLAT(4*PT_MOF),
+	XLAT(4*PT_DCCR),
+	XLAT(4*PT_SRP),
+	XLAT(4*PT_IRP),
+	XLAT(4*PT_CSRINSTR),
+	XLAT(4*PT_CSRADDR),
+	XLAT(4*PT_CSRDATA),
+	XLAT(4*PT_USP),
 #endif
 #ifdef CRISV32
-	{ 4*PT_ORIG_R10, "4*PT_ORIG_R10" },
-	{ 4*PT_R0, "4*PT_R0" },
-	{ 4*PT_R1, "4*PT_R1" },
-	{ 4*PT_R2, "4*PT_R2" },
-	{ 4*PT_R3, "4*PT_R3" },
-	{ 4*PT_R4, "4*PT_R4" },
-	{ 4*PT_R5, "4*PT_R5" },
-	{ 4*PT_R6, "4*PT_R6" },
-	{ 4*PT_R7, "4*PT_R7" },
-	{ 4*PT_R8, "4*PT_R8" },
-	{ 4*PT_R9, "4*PT_R9" },
-	{ 4*PT_R10, "4*PT_R10" },
-	{ 4*PT_R11, "4*PT_R11" },
-	{ 4*PT_R12, "4*PT_R12" },
-	{ 4*PT_R13, "4*PT_R13" },
-	{ 4*PT_ACR, "4*PT_ACR" },
-	{ 4*PT_SRS, "4*PT_SRS" },
-	{ 4*PT_MOF, "4*PT_MOF" },
-	{ 4*PT_SPC, "4*PT_SPC" },
-	{ 4*PT_CCS, "4*PT_CCS" },
-	{ 4*PT_SRP, "4*PT_SRP" },
-	{ 4*PT_ERP, "4*PT_ERP" },
-	{ 4*PT_EXS, "4*PT_EXS" },
-	{ 4*PT_EDA, "4*PT_EDA" },
-	{ 4*PT_USP, "4*PT_USP" },
-	{ 4*PT_PPC, "4*PT_PPC" },
-	{ 4*PT_BP_CTRL, "4*PT_BP_CTRL" },
-	{ 4*PT_BP+4, "4*PT_BP+4" },
-	{ 4*PT_BP+8, "4*PT_BP+8" },
-	{ 4*PT_BP+12, "4*PT_BP+12" },
-	{ 4*PT_BP+16, "4*PT_BP+16" },
-	{ 4*PT_BP+20, "4*PT_BP+20" },
-	{ 4*PT_BP+24, "4*PT_BP+24" },
-	{ 4*PT_BP+28, "4*PT_BP+28" },
-	{ 4*PT_BP+32, "4*PT_BP+32" },
-	{ 4*PT_BP+36, "4*PT_BP+36" },
-	{ 4*PT_BP+40, "4*PT_BP+40" },
-	{ 4*PT_BP+44, "4*PT_BP+44" },
-	{ 4*PT_BP+48, "4*PT_BP+48" },
-	{ 4*PT_BP+52, "4*PT_BP+52" },
-	{ 4*PT_BP+56, "4*PT_BP+56" },
+	XLAT(4*PT_ORIG_R10),
+	XLAT(4*PT_R0),
+	XLAT(4*PT_R1),
+	XLAT(4*PT_R2),
+	XLAT(4*PT_R3),
+	XLAT(4*PT_R4),
+	XLAT(4*PT_R5),
+	XLAT(4*PT_R6),
+	XLAT(4*PT_R7),
+	XLAT(4*PT_R8),
+	XLAT(4*PT_R9),
+	XLAT(4*PT_R10),
+	XLAT(4*PT_R11),
+	XLAT(4*PT_R12),
+	XLAT(4*PT_R13),
+	XLAT(4*PT_ACR),
+	XLAT(4*PT_SRS),
+	XLAT(4*PT_MOF),
+	XLAT(4*PT_SPC),
+	XLAT(4*PT_CCS),
+	XLAT(4*PT_SRP),
+	XLAT(4*PT_ERP),
+	XLAT(4*PT_EXS),
+	XLAT(4*PT_EDA),
+	XLAT(4*PT_USP),
+	XLAT(4*PT_PPC),
+	XLAT(4*PT_BP_CTRL),
+	XLAT(4*PT_BP+4),
+	XLAT(4*PT_BP+8),
+	XLAT(4*PT_BP+12),
+	XLAT(4*PT_BP+16),
+	XLAT(4*PT_BP+20),
+	XLAT(4*PT_BP+24),
+	XLAT(4*PT_BP+28),
+	XLAT(4*PT_BP+32),
+	XLAT(4*PT_BP+36),
+	XLAT(4*PT_BP+40),
+	XLAT(4*PT_BP+44),
+	XLAT(4*PT_BP+48),
+	XLAT(4*PT_BP+52),
+	XLAT(4*PT_BP+56),
 #endif
 #ifdef MICROBLAZE
 	{ PT_GPR(0),		"r0"					},
@@ -2273,6 +1865,23 @@ const struct xlat struct_user_offsets[] = {
 	{ 4*33, "sr" },
 #endif
 #ifdef XTENSA
+	{ REG_A_BASE,           "a0"            },
+	{ REG_A_BASE+1,         "a1"            },
+	{ REG_A_BASE+2,         "a2"            },
+	{ REG_A_BASE+3,         "a3"            },
+	{ REG_A_BASE+4,         "a4"            },
+	{ REG_A_BASE+5,         "a5"            },
+	{ REG_A_BASE+6,         "a6"            },
+	{ REG_A_BASE+7,         "a7"            },
+	{ REG_A_BASE+8,         "a8"            },
+	{ REG_A_BASE+9,         "a9"            },
+	{ REG_A_BASE+10,        "a10"           },
+	{ REG_A_BASE+11,        "a11"           },
+	{ REG_A_BASE+12,        "a12"           },
+	{ REG_A_BASE+13,        "a13"           },
+	{ REG_A_BASE+14,        "a14"           },
+	{ REG_A_BASE+15,        "a15"           },
+	{ REG_PC,               "pc"            },
 	{ SYSCALL_NR,           "syscall_nr"    },
 	{ REG_AR_BASE,          "ar0"           },
 	{ REG_AR_BASE+1,        "ar1"           },
@@ -2345,23 +1954,6 @@ const struct xlat struct_user_offsets[] = {
 	{ REG_WB,               "wb"            },
 	{ REG_WS,               "ws"            },
 	{ REG_PS,               "ps"            },
-	{ REG_PC,               "pc"            },
-	{ REG_A_BASE,           "a0"            },
-	{ REG_A_BASE+1,         "a1"            },
-	{ REG_A_BASE+2,         "a2"            },
-	{ REG_A_BASE+3,         "a3"            },
-	{ REG_A_BASE+4,         "a4"            },
-	{ REG_A_BASE+5,         "a5"            },
-	{ REG_A_BASE+6,         "a6"            },
-	{ REG_A_BASE+7,         "a7"            },
-	{ REG_A_BASE+8,         "a8"            },
-	{ REG_A_BASE+9,         "a9"            },
-	{ REG_A_BASE+10,        "a10"           },
-	{ REG_A_BASE+11,        "a11"           },
-	{ REG_A_BASE+12,        "a12"           },
-	{ REG_A_BASE+13,        "a13"           },
-	{ REG_A_BASE+14,        "a14"           },
-	{ REG_A_BASE+15,        "a15"           },
 #endif
 
 	/* Other fields in "struct user" */
@@ -2501,8 +2093,10 @@ const struct xlat struct_user_offsets[] = {
 	/* nothing */
 #elif defined(XTENSA)
 	/* nothing */
+#elif defined(ARC)
+	/* nothing */
 #endif
-	{ 0,			NULL					},
+	XLAT_END
 };
 
 int
@@ -2639,39 +2233,43 @@ sys_ptrace(struct tcb *tcp)
 #ifndef FUTEX_CLOCK_REALTIME
 # define FUTEX_CLOCK_REALTIME 256
 #endif
-static const struct xlat futexops[] = {
-	{ FUTEX_WAIT,					"FUTEX_WAIT" },
-	{ FUTEX_WAKE,					"FUTEX_WAKE" },
-	{ FUTEX_FD,					"FUTEX_FD" },
-	{ FUTEX_REQUEUE,				"FUTEX_REQUEUE" },
-	{ FUTEX_CMP_REQUEUE,				"FUTEX_CMP_REQUEUE" },
-	{ FUTEX_WAKE_OP,				"FUTEX_WAKE_OP" },
-	{ FUTEX_LOCK_PI,				"FUTEX_LOCK_PI" },
-	{ FUTEX_UNLOCK_PI,				"FUTEX_UNLOCK_PI" },
-	{ FUTEX_TRYLOCK_PI,				"FUTEX_TRYLOCK_PI" },
-	{ FUTEX_WAIT_BITSET,				"FUTEX_WAIT_BITSET" },
-	{ FUTEX_WAKE_BITSET,				"FUTEX_WAKE_BITSET" },
-	{ FUTEX_WAIT_REQUEUE_PI,			"FUTEX_WAIT_REQUEUE_PI" },
-	{ FUTEX_CMP_REQUEUE_PI,				"FUTEX_CMP_REQUEUE_PI" },
-	{ FUTEX_WAIT|FUTEX_PRIVATE_FLAG,		"FUTEX_WAIT_PRIVATE" },
-	{ FUTEX_WAKE|FUTEX_PRIVATE_FLAG,		"FUTEX_WAKE_PRIVATE" },
-	{ FUTEX_FD|FUTEX_PRIVATE_FLAG,			"FUTEX_FD_PRIVATE" },
-	{ FUTEX_REQUEUE|FUTEX_PRIVATE_FLAG,		"FUTEX_REQUEUE_PRIVATE" },
-	{ FUTEX_CMP_REQUEUE|FUTEX_PRIVATE_FLAG,		"FUTEX_CMP_REQUEUE_PRIVATE" },
-	{ FUTEX_WAKE_OP|FUTEX_PRIVATE_FLAG,		"FUTEX_WAKE_OP_PRIVATE" },
-	{ FUTEX_LOCK_PI|FUTEX_PRIVATE_FLAG,		"FUTEX_LOCK_PI_PRIVATE" },
-	{ FUTEX_UNLOCK_PI|FUTEX_PRIVATE_FLAG,		"FUTEX_UNLOCK_PI_PRIVATE" },
-	{ FUTEX_TRYLOCK_PI|FUTEX_PRIVATE_FLAG,		"FUTEX_TRYLOCK_PI_PRIVATE" },
-	{ FUTEX_WAIT_BITSET|FUTEX_PRIVATE_FLAG,		"FUTEX_WAIT_BITSET_PRIVATE" },
-	{ FUTEX_WAKE_BITSET|FUTEX_PRIVATE_FLAG,		"FUTEX_WAKE_BITSET_PRIVATE" },
-	{ FUTEX_WAIT_REQUEUE_PI|FUTEX_PRIVATE_FLAG,	"FUTEX_WAIT_REQUEUE_PI_PRIVATE" },
-	{ FUTEX_CMP_REQUEUE_PI|FUTEX_PRIVATE_FLAG,	"FUTEX_CMP_REQUEUE_PI_PRIVATE" },
-	{ FUTEX_WAIT_BITSET|FUTEX_CLOCK_REALTIME,	"FUTEX_WAIT_BITSET|FUTEX_CLOCK_REALTIME" },
-	{ FUTEX_WAIT_BITSET|FUTEX_PRIVATE_FLAG|FUTEX_CLOCK_REALTIME,	"FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME" },
-	{ FUTEX_WAIT_REQUEUE_PI|FUTEX_CLOCK_REALTIME,	"FUTEX_WAIT_REQUEUE_PI|FUTEX_CLOCK_REALTIME" },
-	{ FUTEX_WAIT_REQUEUE_PI|FUTEX_PRIVATE_FLAG|FUTEX_CLOCK_REALTIME,	"FUTEX_WAIT_REQUEUE_PI_PRIVATE|FUTEX_CLOCK_REALTIME" },
-	{ 0,						NULL }
-};
+#ifndef FUTEX_WAIT_PRIVATE
+# define FUTEX_WAIT_PRIVATE		(FUTEX_WAIT | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_WAKE_PRIVATE
+# define FUTEX_WAKE_PRIVATE		(FUTEX_WAKE | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_REQUEUE_PRIVATE
+# define FUTEX_REQUEUE_PRIVATE		(FUTEX_REQUEUE | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_CMP_REQUEUE_PRIVATE
+# define FUTEX_CMP_REQUEUE_PRIVATE 	(FUTEX_CMP_REQUEUE | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_WAKE_OP_PRIVATE
+# define FUTEX_WAKE_OP_PRIVATE		(FUTEX_WAKE_OP | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_LOCK_PI_PRIVATE
+# define FUTEX_LOCK_PI_PRIVATE		(FUTEX_LOCK_PI | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_UNLOCK_PI_PRIVATE
+# define FUTEX_UNLOCK_PI_PRIVATE	(FUTEX_UNLOCK_PI | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_TRYLOCK_PI_PRIVATE
+# define FUTEX_TRYLOCK_PI_PRIVATE 	(FUTEX_TRYLOCK_PI | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_WAIT_BITSET_PRIVATE
+# define FUTEX_WAIT_BITSET_PRIVATE	(FUTEX_WAIT_BITSET | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_WAKE_BITSET_PRIVATE
+# define FUTEX_WAKE_BITSET_PRIVATE	(FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_WAIT_REQUEUE_PI_PRIVATE
+# define FUTEX_WAIT_REQUEUE_PI_PRIVATE	(FUTEX_WAIT_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
+#endif
+#ifndef FUTEX_CMP_REQUEUE_PI_PRIVATE
+# define FUTEX_CMP_REQUEUE_PI_PRIVATE	(FUTEX_CMP_REQUEUE_PI | FUTEX_PRIVATE_FLAG)
+#endif
+#include "xlat/futexops.h"
 #ifndef FUTEX_OP_SET
 # define FUTEX_OP_SET		0
 # define FUTEX_OP_ADD		1
@@ -2685,23 +2283,8 @@ static const struct xlat futexops[] = {
 # define FUTEX_OP_CMP_GT	4
 # define FUTEX_OP_CMP_GE	5
 #endif
-static const struct xlat futexwakeops[] = {
-	{ FUTEX_OP_SET,		"FUTEX_OP_SET" },
-	{ FUTEX_OP_ADD,		"FUTEX_OP_ADD" },
-	{ FUTEX_OP_OR,		"FUTEX_OP_OR" },
-	{ FUTEX_OP_ANDN,	"FUTEX_OP_ANDN" },
-	{ FUTEX_OP_XOR,		"FUTEX_OP_XOR" },
-	{ 0,			NULL }
-};
-static const struct xlat futexwakecmps[] = {
-	{ FUTEX_OP_CMP_EQ,	"FUTEX_OP_CMP_EQ" },
-	{ FUTEX_OP_CMP_NE,	"FUTEX_OP_CMP_NE" },
-	{ FUTEX_OP_CMP_LT,	"FUTEX_OP_CMP_LT" },
-	{ FUTEX_OP_CMP_LE,	"FUTEX_OP_CMP_LE" },
-	{ FUTEX_OP_CMP_GT,	"FUTEX_OP_CMP_GT" },
-	{ FUTEX_OP_CMP_GE,	"FUTEX_OP_CMP_GE" },
-	{ 0,			NULL }
-};
+#include "xlat/futexwakeops.h"
+#include "xlat/futexwakecmps.h"
 
 int
 sys_futex(struct tcb *tcp)
@@ -2827,12 +2410,7 @@ sys_get_robust_list(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat schedulers[] = {
-	{ SCHED_OTHER,	"SCHED_OTHER" },
-	{ SCHED_RR,	"SCHED_RR" },
-	{ SCHED_FIFO,	"SCHED_FIFO" },
-	{ 0,		NULL }
-};
+#include "xlat/schedulers.h"
 
 int
 sys_sched_getscheduler(struct tcb *tcp)
@@ -2857,7 +2435,7 @@ sys_sched_setscheduler(struct tcb *tcp)
 		if (umove(tcp, tcp->u_arg[2], &p) < 0)
 			tprintf(", %#lx", tcp->u_arg[2]);
 		else
-			tprintf(", { %d }", p.__sched_priority);
+			tprintf(", { %d }", p.sched_priority);
 	}
 	return 0;
 }
@@ -2872,7 +2450,7 @@ sys_sched_getparam(struct tcb *tcp)
 		if (umove(tcp, tcp->u_arg[1], &p) < 0)
 			tprintf("%#lx", tcp->u_arg[1]);
 		else
-			tprintf("{ %d }", p.__sched_priority);
+			tprintf("{ %d }", p.sched_priority);
 	}
 	return 0;
 }
@@ -2885,7 +2463,7 @@ sys_sched_setparam(struct tcb *tcp)
 		if (umove(tcp, tcp->u_arg[1], &p) < 0)
 			tprintf("%d, %#lx", (int) tcp->u_arg[0], tcp->u_arg[1]);
 		else
-			tprintf("%d, { %d }", (int) tcp->u_arg[0], p.__sched_priority);
+			tprintf("%d, { %d }", (int) tcp->u_arg[0], p.sched_priority);
 	}
 	return 0;
 }
@@ -2916,13 +2494,7 @@ sys_sched_rr_get_interval(struct tcb *tcp)
 #if defined X86_64 || defined X32
 # include <asm/prctl.h>
 
-static const struct xlat archvals[] = {
-	{ ARCH_SET_GS,		"ARCH_SET_GS"		},
-	{ ARCH_SET_FS,		"ARCH_SET_FS"		},
-	{ ARCH_GET_FS,		"ARCH_GET_FS"		},
-	{ ARCH_GET_GS,		"ARCH_GET_GS"		},
-	{ 0,			NULL			},
-};
+#include "xlat/archvals.h"
 
 int
 sys_arch_prctl(struct tcb *tcp)

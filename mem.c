@@ -33,12 +33,6 @@
 #include "defs.h"
 #include <asm/mman.h>
 #include <sys/mman.h>
-#if defined(I386)
-# include <asm/ldt.h>
-# ifdef HAVE_STRUCT_USER_DESC
-#  define modify_ldt_ldt_s user_desc
-# endif
-#endif
 
 static unsigned long
 get_pagesize()
@@ -59,117 +53,8 @@ sys_brk(struct tcb *tcp)
 	return RVAL_HEX;
 }
 
-static const struct xlat mmap_prot[] = {
-	{ PROT_NONE,	"PROT_NONE",	},
-	{ PROT_READ,	"PROT_READ"	},
-	{ PROT_WRITE,	"PROT_WRITE"	},
-	{ PROT_EXEC,	"PROT_EXEC"	},
-#ifdef PROT_SEM
-	{ PROT_SEM,	"PROT_SEM"	},
-#endif
-#ifdef PROT_GROWSDOWN
-	{ PROT_GROWSDOWN,"PROT_GROWSDOWN"},
-#endif
-#ifdef PROT_GROWSUP
-	{ PROT_GROWSUP, "PROT_GROWSUP"	},
-#endif
-#ifdef PROT_SAO
-	{ PROT_SAO,	"PROT_SAO"	},
-#endif
-	{ 0,		NULL		},
-};
-
-static const struct xlat mmap_flags[] = {
-	{ MAP_SHARED,	"MAP_SHARED"	},
-	{ MAP_PRIVATE,	"MAP_PRIVATE"	},
-	{ MAP_FIXED,	"MAP_FIXED"	},
-#ifdef MAP_ANONYMOUS
-	{ MAP_ANONYMOUS,"MAP_ANONYMOUS"	},
-#endif
-#ifdef MAP_32BIT
-	{ MAP_32BIT,	"MAP_32BIT"	},
-#endif
-#ifdef MAP_RENAME
-	{ MAP_RENAME,	"MAP_RENAME"	},
-#endif
-#ifdef MAP_NORESERVE
-	{ MAP_NORESERVE,"MAP_NORESERVE"	},
-#endif
-#ifdef MAP_POPULATE
-	{ MAP_POPULATE, "MAP_POPULATE" },
-#endif
-#ifdef MAP_NONBLOCK
-	{ MAP_NONBLOCK, "MAP_NONBLOCK" },
-#endif
-	/*
-	 * XXX - this was introduced in SunOS 4.x to distinguish between
-	 * the old pre-4.x "mmap()", which:
-	 *
-	 *	only let you map devices with an "mmap" routine (e.g.,
-	 *	frame buffers) in;
-	 *
-	 *	required you to specify the mapping address;
-	 *
-	 *	returned 0 on success and -1 on failure;
-	 *
-	 * memory and which, and the 4.x "mmap()" which:
-	 *
-	 *	can map plain files;
-	 *
-	 *	can be asked to pick where to map the file;
-	 *
-	 *	returns the address where it mapped the file on success
-	 *	and -1 on failure.
-	 *
-	 * It's not actually used in source code that calls "mmap()"; the
-	 * "mmap()" routine adds it for you.
-	 *
-	 * It'd be nice to come up with some way of eliminating it from
-	 * the flags, e.g. reporting calls *without* it as "old_mmap()"
-	 * and calls with it as "mmap()".
-	 */
-#ifdef _MAP_NEW
-	{ _MAP_NEW,	"_MAP_NEW"	},
-#endif
-#ifdef MAP_GROWSDOWN
-	{ MAP_GROWSDOWN,"MAP_GROWSDOWN"	},
-#endif
-#ifdef MAP_DENYWRITE
-	{ MAP_DENYWRITE,"MAP_DENYWRITE"	},
-#endif
-#ifdef MAP_EXECUTABLE
-	{ MAP_EXECUTABLE,"MAP_EXECUTABLE"},
-#endif
-#ifdef MAP_INHERIT
-	{ MAP_INHERIT,	"MAP_INHERIT"	},
-#endif
-#ifdef MAP_FILE
-	{ MAP_FILE,	"MAP_FILE"	},
-#endif
-#ifdef MAP_LOCKED
-	{ MAP_LOCKED,	"MAP_LOCKED"	},
-#endif
-	/* FreeBSD ones */
-#if defined(MAP_ANON) && (!defined(MAP_ANONYMOUS) || MAP_ANON != MAP_ANONYMOUS)
-	{ MAP_ANON,	"MAP_ANON"	},
-#endif
-#ifdef MAP_HASSEMAPHORE
-	{ MAP_HASSEMAPHORE,"MAP_HASSEMAPHORE"},
-#endif
-#ifdef MAP_STACK
-	{ MAP_STACK,	"MAP_STACK"	},
-#endif
-#if defined MAP_UNINITIALIZED && MAP_UNINITIALIZED > 0
-	{ MAP_UNINITIALIZED,"MAP_UNINITIALIZED"},
-#endif
-#ifdef MAP_NOSYNC
-	{ MAP_NOSYNC,	"MAP_NOSYNC"	},
-#endif
-#ifdef MAP_NOCORE
-	{ MAP_NOCORE,	"MAP_NOCORE"	},
-#endif
-	{ 0,		NULL		},
-};
+#include "xlat/mmap_prot.h"
+#include "xlat/mmap_flags.h"
 
 static int
 print_mmap(struct tcb *tcp, long *u_arg, unsigned long long offset)
@@ -318,13 +203,7 @@ sys_mprotect(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat mremap_flags[] = {
-	{ MREMAP_MAYMOVE,	"MREMAP_MAYMOVE"	},
-#ifdef MREMAP_FIXED
-	{ MREMAP_FIXED,		"MREMAP_FIXED"		},
-#endif
-	{ 0,			NULL			}
-};
+#include "xlat/mremap_flags.h"
 
 int
 sys_mremap(struct tcb *tcp)
@@ -342,57 +221,7 @@ sys_mremap(struct tcb *tcp)
 	return RVAL_HEX;
 }
 
-static const struct xlat madvise_cmds[] = {
-#ifdef MADV_NORMAL
-	{ MADV_NORMAL,		"MADV_NORMAL" },
-#endif
-#ifdef MADV_RANDOM
-	{ MADV_RANDOM,		"MADV_RANDOM" },
-#endif
-#ifdef MADV_SEQUENTIAL
-	{ MADV_SEQUENTIAL,	"MADV_SEQUENTIAL" },
-#endif
-#ifdef MADV_WILLNEED
-	{ MADV_WILLNEED,	"MADV_WILLNEED" },
-#endif
-#ifdef MADV_DONTNEED
-	{ MADV_DONTNEED,	"MADV_DONTNEED" },
-#endif
-#ifdef MADV_REMOVE
-	{ MADV_REMOVE,		"MADV_REMOVE" },
-#endif
-#ifdef MADV_DONTFORK
-	{ MADV_DONTFORK,	"MADV_DONTFORK" },
-#endif
-#ifdef MADV_DOFORK
-	{ MADV_DOFORK,		"MADV_DOFORK" },
-#endif
-#ifdef MADV_HWPOISON
-	{ MADV_HWPOISON,	"MADV_HWPOISON" },
-#endif
-#ifdef MADV_SOFT_OFFLINE
-	{ MADV_SOFT_OFFLINE,	"MADV_SOFT_OFFLINE" },
-#endif
-#ifdef MADV_MERGEABLE
-	{ MADV_MERGEABLE,	"MADV_MERGEABLE" },
-#endif
-#ifdef MADV_UNMERGEABLE
-	{ MADV_UNMERGEABLE,	"MADV_UNMERGEABLE" },
-#endif
-#ifdef MADV_HUGEPAGE
-	{ MADV_HUGEPAGE,	"MADV_HUGEPAGE" },
-#endif
-#ifdef MADV_NOHUGEPAGE
-	{ MADV_NOHUGEPAGE,	"MADV_NOHUGEPAGE" },
-#endif
-#ifdef MADV_DONTDUMP
-	{ MADV_DONTDUMP,	"MADV_DONTDUMP" },
-#endif
-#ifdef MADV_DODUMP
-	{ MADV_DODUMP,		"MADV_DODUMP" },
-#endif
-	{ 0,			NULL },
-};
+#include "xlat/madvise_cmds.h"
 
 int
 sys_madvise(struct tcb *tcp)
@@ -404,15 +233,7 @@ sys_madvise(struct tcb *tcp)
 	return 0;
 }
 
-static const struct xlat mlockall_flags[] = {
-#ifdef MCL_CURRENT
-	{ MCL_CURRENT,	"MCL_CURRENT" },
-#endif
-#ifdef MCL_FUTURE
-	{ MCL_FUTURE,	"MCL_FUTURE" },
-#endif
-	{ 0,		NULL}
-};
+#include "xlat/mlockall_flags.h"
 
 int
 sys_mlockall(struct tcb *tcp)
@@ -425,14 +246,7 @@ sys_mlockall(struct tcb *tcp)
 
 #ifdef MS_ASYNC
 
-static const struct xlat mctl_sync[] = {
-#ifdef MS_SYNC
-	{ MS_SYNC,	"MS_SYNC"	},
-#endif
-	{ MS_ASYNC,	"MS_ASYNC"	},
-	{ MS_INVALIDATE,"MS_INVALIDATE"	},
-	{ 0,		NULL		},
-};
+#include "xlat/mctl_sync.h"
 
 int
 sys_msync(struct tcb *tcp)
@@ -452,20 +266,8 @@ sys_msync(struct tcb *tcp)
 
 #ifdef MC_SYNC
 
-static const struct xlat mctl_funcs[] = {
-	{ MC_LOCK,	"MC_LOCK"	},
-	{ MC_LOCKAS,	"MC_LOCKAS"	},
-	{ MC_SYNC,	"MC_SYNC"	},
-	{ MC_UNLOCK,	"MC_UNLOCK"	},
-	{ MC_UNLOCKAS,	"MC_UNLOCKAS"	},
-	{ 0,		NULL		},
-};
-
-static const struct xlat mctl_lockas[] = {
-	{ MCL_CURRENT,	"MCL_CURRENT"	},
-	{ MCL_FUTURE,	"MCL_FUTURE"	},
-	{ 0,		NULL		},
-};
+#include "xlat/mctl_funcs.h"
+#include "xlat/mctl_lockas.h"
 
 int
 sys_mctl(struct tcb *tcp)
@@ -540,117 +342,6 @@ sys_getpagesize(struct tcb *tcp)
 }
 #endif
 
-#if defined(I386)
-void
-print_ldt_entry(struct modify_ldt_ldt_s *ldt_entry)
-{
-	tprintf("base_addr:%#08lx, "
-		"limit:%d, "
-		"seg_32bit:%d, "
-		"contents:%d, "
-		"read_exec_only:%d, "
-		"limit_in_pages:%d, "
-		"seg_not_present:%d, "
-		"useable:%d}",
-		(long) ldt_entry->base_addr,
-		ldt_entry->limit,
-		ldt_entry->seg_32bit,
-		ldt_entry->contents,
-		ldt_entry->read_exec_only,
-		ldt_entry->limit_in_pages,
-		ldt_entry->seg_not_present,
-		ldt_entry->useable);
-}
-
-int
-sys_modify_ldt(struct tcb *tcp)
-{
-	if (entering(tcp)) {
-		struct modify_ldt_ldt_s copy;
-		tprintf("%ld", tcp->u_arg[0]);
-		if (tcp->u_arg[1] == 0
-				|| tcp->u_arg[2] != sizeof(struct modify_ldt_ldt_s)
-				|| umove(tcp, tcp->u_arg[1], &copy) == -1)
-			tprintf(", %lx", tcp->u_arg[1]);
-		else {
-			tprintf(", {entry_number:%d, ", copy.entry_number);
-			if (!verbose(tcp))
-				tprints("...}");
-			else {
-				print_ldt_entry(&copy);
-			}
-		}
-		tprintf(", %lu", tcp->u_arg[2]);
-	}
-	return 0;
-}
-
-int
-sys_set_thread_area(struct tcb *tcp)
-{
-	struct modify_ldt_ldt_s copy;
-	if (entering(tcp)) {
-		if (umove(tcp, tcp->u_arg[0], &copy) != -1) {
-			if (copy.entry_number == -1)
-				tprintf("{entry_number:%d -> ",
-					copy.entry_number);
-			else
-				tprints("{entry_number:");
-		}
-	} else {
-		if (umove(tcp, tcp->u_arg[0], &copy) != -1) {
-			tprintf("%d, ", copy.entry_number);
-			if (!verbose(tcp))
-				tprints("...}");
-			else {
-				print_ldt_entry(&copy);
-			}
-		} else {
-			tprintf("%lx", tcp->u_arg[0]);
-		}
-	}
-	return 0;
-
-}
-
-int
-sys_get_thread_area(struct tcb *tcp)
-{
-	struct modify_ldt_ldt_s copy;
-	if (exiting(tcp)) {
-		if (umove(tcp, tcp->u_arg[0], &copy) != -1) {
-			tprintf("{entry_number:%d, ", copy.entry_number);
-			if (!verbose(tcp))
-				tprints("...}");
-			else {
-				print_ldt_entry(&copy);
-			}
-		} else {
-			tprintf("%lx", tcp->u_arg[0]);
-		}
-	}
-	return 0;
-
-}
-#endif /* I386 */
-
-#if defined(M68K)
-int
-sys_set_thread_area(struct tcb *tcp)
-{
-	if (entering(tcp))
-		tprintf("%#lx", tcp->u_arg[0]);
-	return 0;
-
-}
-
-int
-sys_get_thread_area(struct tcb *tcp)
-{
-	return RVAL_HEX;
-}
-#endif
-
 int
 sys_remap_file_pages(struct tcb *tcp)
 {
@@ -680,32 +371,10 @@ sys_remap_file_pages(struct tcb *tcp)
 #define MPOL_MF_MOVE	(1<<1)
 #define MPOL_MF_MOVE_ALL (1<<2)
 
-static const struct xlat policies[] = {
-	{ MPOL_DEFAULT,		"MPOL_DEFAULT"		},
-	{ MPOL_PREFERRED,	"MPOL_PREFERRED"	},
-	{ MPOL_BIND,		"MPOL_BIND"		},
-	{ MPOL_INTERLEAVE,	"MPOL_INTERLEAVE"	},
-	{ 0,			NULL			}
-};
-
-static const struct xlat mbindflags[] = {
-	{ MPOL_MF_STRICT,	"MPOL_MF_STRICT"	},
-	{ MPOL_MF_MOVE,		"MPOL_MF_MOVE"		},
-	{ MPOL_MF_MOVE_ALL,	"MPOL_MF_MOVE_ALL"	},
-	{ 0,			NULL			}
-};
-
-static const struct xlat mempolicyflags[] = {
-	{ MPOL_F_NODE,		"MPOL_F_NODE"		},
-	{ MPOL_F_ADDR,		"MPOL_F_ADDR"		},
-	{ 0,			NULL			}
-};
-
-static const struct xlat move_pages_flags[] = {
-	{ MPOL_MF_MOVE,		"MPOL_MF_MOVE"		},
-	{ MPOL_MF_MOVE_ALL,	"MPOL_MF_MOVE_ALL"	},
-	{ 0,			NULL			}
-};
+#include "xlat/policies.h"
+#include "xlat/mbindflags.h"
+#include "xlat/mempolicyflags.h"
+#include "xlat/move_pages_flags.h"
 
 static void
 get_nodes(struct tcb *tcp, unsigned long ptr, unsigned long maxnodes, int err)

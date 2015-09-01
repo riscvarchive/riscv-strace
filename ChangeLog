@@ -1,3 +1,2107 @@
+2014-08-15  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Prepare for 4.9 release.
+	* NEWS: Update for 4.9 release.
+	* debian/changelog: 4.9-1.
+	* strace.spec: 4.9-1.
+
+	Sync strace.spec and debian/ with packages.
+	* debian/changelog: Sync with 4.8-1.1.
+	* debian/control: Likewise.
+	* debian/rules: Likewise.
+	* strace.spec: Sync with 4.8-5.
+
+	NEWS: Update for 4.9 release.
+
+2014-08-15  Mike Frysinger  <vapier@gentoo.org>
+
+	Update syscall tables to the point where they include renameat2.
+	* linux/dummy.h: Add printargs aliases for sys_sched_getattr and
+	sys_sched_setattr.
+	* linux/aarch64/syscallent1.h: Add kcmp/finit_module/sched_setattr/
+	sched_getattr/renameat2.
+	* linux/alpha/syscallent.h: Add kcmp/finit_module.
+	* linux/arm/syscallent.h: Add sched_setattr/sched_getattr/renameat2.
+	* linux/hppa/syscallent.h: Add sched_setattr/sched_getattr/utimes/renameat2.
+	* linux/i386/syscallent.h: Add sched_setattr/sched_getattr/renameat2.
+	* linux/ia64/syscallent.h: Likewise.
+	* linux/m68k/syscallent.h: Likewise.
+	* linux/microblaze/syscallent.h: Likewise.
+	* linux/mips/syscallent-n32.h: Likewise.
+	* linux/mips/syscallent-n64.h: Add getdents64/sched_setattr/sched_getattr/
+	renameat2.
+	* linux/mips/syscallent-o32.h: Add sched_setattr/sched_getattr/renameat2.
+	* linux/powerpc/syscallent.h: Fix finit_module/kcmp order.  Add sched_setattr/
+	sched_getattr/renameat2.
+	* linux/s390/syscallent.h: Add sched_setattr/sched_getattr/renameat2.
+	* linux/s390x/syscallent.h: Likewise.
+	* linux/sparc/syscallent.h: Likewise.
+	* linux/x32/syscallent.h: Likewise.
+	* linux/x86_64/syscallent.h: Likewise.
+	* linux/xtensa/syscallent.h: Add sched_setattr/sched_getattr.
+
+	renameat2: add decoding support.
+	* file.c (decode_renameat, sys_renameat2): New functions.
+	(sys_renameat): Use decode_renameat.
+	* pathtrace.c (pathtrace_match): Handle sys_renameat2.
+	* linux/syscall.h (sys_renameat2): New prototype.
+	* xlat/rename_flags.in: New file.
+
+2014-08-14  Mike Frysinger  <vapier@gentoo.org>
+
+	CREDITS: fix generation in out of tree builds.
+	The {...} code changes the working dir with `cd`, but the commands outside
+	of that block expects to be in the original dir.  Change to a subshell so
+	the path outside of this block remains unchanged.
+
+	* Makefile.am ($(srcdir)/CREDITS): Change {...} to (...).
+
+	ia64: add missing syscalls.
+	When the preadv/pwritev syscalls were added, the ones before it in the
+	ia64 list were missed, so all the syscalls there and later were not in
+	the right location (causing things to be decoded incorrectly).
+
+	Add the missing syscalls before preadv which also re-aligns all the
+	syscalls after that point.  This fixes the uio.test.
+
+	* linux/ia64/syscallent.h: Add syscalls 1310 through 1318.
+
+	ia64: fix sigaction decoding.
+	Looks like ia64 doesn't have sa_restorer either, yet still defines
+	SA_RESTORER.  Deploy the same trick that HPPA is using to make the
+	test pass.
+
+	* signal.c (SA_RESTORER): Undefine when IA64 is defined.
+	(struct new_sigaction) [IA64]: Disable sa_restorer.
+
+2014-08-12  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: skip detach-stopped.test when PTRACE_SEIZE doesn't work.
+	detach-stopped.test is known to fail when PTRACE_SEIZE is not available,
+	so skip the test in that case.
+
+	* tests/detach-stopped.test: Check for "strace -d" output and skip the
+	test when it says that PTRACE_SEIZE doesn't work.
+
+2014-08-11  Erik Johansson  <erik@ejohansson.se>
+
+	sh: fix syscall numbering for recv and sendto.
+	* linux/sh/syscallent.h: Swap recv and sendto syscall entries.
+
+2014-08-11  Mike Frysinger  <vapier@gentoo.org>
+
+	tests: fix uio building w/out preadv/pwritev.
+	The preadv/pwritev symbols weren't added to glibc until the 2.10 release,
+	so trying to build the uio test leads to link failures.  Add configure
+	tests and update uio.test to handle this.
+
+	* configure.ac (AC_CHECK_FUNCS): Add preadv/pwritev.
+	* tests/uio.c: Include config.h.
+	(main): Check for HAVE_PREADV and HAVE_PWRITEV.
+	* tests/uio.test: Check exit status of uio helper.
+
+	tests: ignore *.tmp files.
+	The tests like to generate random .tmp files, so ignore them.
+
+	* tests/.gitignore: Add *.tmp.
+
+	tests: fix shell errors in detach tests.
+	The current detach test code does:
+		set -e
+		...
+		cleanup() {
+			set +e
+			kill ...
+			wait ...
+		}
+		...
+		cleanup
+		exit 0
+
+	The problem is that while `set -e` is disabled for the body of the
+	cleanup function, it isn't necessarily disabled in the caller scope.
+	So if the return value of the cleanup function (`wait` in this case)
+	is non-zero, the script ends up failing overall.
+
+	Add an explicit return 0 to the cleanup function so that we don't kill
+	the overall test pipeline.
+
+	* tests/detach-running.test (cleanup): Add return 0.
+	* tests/detach-sleeping.test (cleanup): Likewise.
+	* tests/detach-stopped.test (cleanup): Likewise.
+
+	set_ptracer_any: add a little documentation.
+	This way I don't have to keep reading up on these options and wondering
+	why the code isn't aborting when the call fails.
+
+	* tests/set_ptracer_any.c (main): Note prctl failures are ok.
+
+2014-08-10  Mike Frysinger  <vapier@gentoo.org>
+
+	signal: fix thinko in sa_restorer.
+	Previous commit here re-added the bugs trying to be fixed due to a
+	logic thinko.  The patches were tested in isolation and hand merged
+	later.  Oops.
+
+	* signal.c (struct new_sigaction): Change || to &&.
+
+2014-08-09  Mike Frysinger  <vapier@gentoo.org>
+
+	sigaction test: support arches w/out SA_RESTORER and swapped args.
+	Running Linux 3.15 (sparc64) and glibc 2.17 (sparc32) triggers a
+	rt_sigaction call that does not use SA_RESTORER and has an order
+	where it inserts a restorer and a size.  The current tests don't
+	support that ordering, so add another regex.
+
+	* tests/sigaction.awk: Support no SA_RESTORER and swapped args.
+
+	alpha/sparc: fix arg count for rt_sigaction.
+	Both these arches have a rt_sigaction syscall that takes 5 args, not 4.
+
+	* linux/alpha/syscallent.h (rt_sigaction): Change nargs to 5.
+	* linux/sparc/syscallent.h (rt_sigaction): Change nargs to 5.
+
+	hppa: fix sigaction decoding.
+	Since the rt_sigaction syscall on hppa doesn't have a sa_restorer,
+	do not include it in the kernel struct.
+
+	We also have to undefine SA_RESTORER so that code doesn't try to
+	use it.  The headers will export this, but the syscall doesn't
+	actually respect it.
+
+	* signal.c (SA_RESTORER): Undefine when HPPA is defined.
+	(struct new_sigaction): Disable sa_restorer on hppa.
+
+	alpha: fix sigaction decoding.
+	Since the rt_sigaction syscall on alpha doesn't have a sa_restorer,
+	do not include it in the kernel struct.
+
+	* signal.c (struct new_sigaction): Disable sa_restorer on alpha.
+
+2014-08-08  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Prepare for -yy option support.
+	* defs.h (show_fd_path): Change type to unsigned int.
+	* strace.c (show_fd_path): Likewise.
+	(init): Handle repeated -y option.
+
+2014-08-07  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Fix preadv/pwritev offset decoding on ILP32 architectures.
+	This fixes regression introduced by the previous commit.
+
+	* io.c (print_llu_from_low_high_val) [SIZEOF_LONG != SIZEOF_LONG_LONG]:
+	Cast argument to unsigned long before casting it to unsigned long long.
+
+	Fix preadv/pwritev offset decoding on bigendian architectures.
+	This partially reverts commit 7845a42b39e59e904d01e75e21f7bc7eb6462560.
+
+	* util.c (printllval): Remove align argument.
+	* defs.h (printllval): Update prototype.
+	(printllval_aligned, printllval_unaligned): Remove.
+	* file.c (sys_readahead, sys_truncate64, sys_ftruncate64, sys_fadvise64,
+	sys_fadvise64_64, sys_sync_file_range, sys_sync_file_range2,
+	sys_fallocate): Replace printllval_aligned call with printllval.
+	* io.c (sys_pread, sys_pwrite): Likewise.
+	(print_llu_from_low_high_val): New function.
+	(sys_preadv, sys_pwritev): Use it instead of printllval_unaligned.
+
+2014-08-06  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Decode file descriptors returned by accept and accept4 syscalls.
+	* net.c (do_accept): Rename to do_sockname.
+	(sys_accept, sys_accept4): Update callers, return RVAL_FD.
+	(sys_getsockname, sys_getpeername): Call do_sockname directly.
+	* tests/net-fd.test: Update.
+
+2014-08-01  Mike Frysinger  <vapier@gentoo.org>
+
+	x32: update io_{setup,submit} syscalls.
+	Starting in 3.16, these two syscalls have gotten their own entry
+	point for x32.  See linux 7fd44dacdd803c0bbf38bf478d51d280902bb0f1.
+
+	* linux/x32/syscallent.h: Change existing io_{setup,submit} to 64bit,
+	and add new entry points for x32 specifically.
+
+2014-06-18  Max Filippov  <jcmvbkbc@gmail.com>
+
+	xtensa: sort values in struct_user_offsets.
+	Otherwise ptrace syscall argument decoding is wrong:
+	  ptrace(PTRACE_PEEKUSER, 296, syscall_nr, [0x4048eb]) = 0
+	  ptrace(PTRACE_PEEKUSER, 296, syscall_nr, [0x3fa6cd30]) = 0
+	  ptrace(PTRACE_PEEKUSER, 296, syscall_nr, [0x8040676d]) = 0
+	instead of
+	  ptrace(PTRACE_PEEKUSER, 296, pc, [0x4048eb]) = 0
+	  ptrace(PTRACE_PEEKUSER, 296, a1, [0x3fa6cd30]) = 0
+	  ptrace(PTRACE_PEEKUSER, 296, a0, [0x8040676d]) = 0
+
+	* process.c (struct_user_offsets) [XTENSA]: Sort values.
+
+2014-06-18  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Document -k option as experimental.
+	strace -k does not produce a reliable output on all supported
+	configurations yet, even basic strace-k.test is known to fail
+	on some of them.
+
+	* strace.c (usage): Document -k option as experimental.
+	* strace.1: Likewise.
+	* NEWS: Likewise.
+
+	tests: robustify -k test.
+	Split stack-fcall.c into several compilation units so that intermediate
+	function calls would not be optimized out by compiler.
+
+	* tests/stack-fcall.c: Move intermediate functions to ...
+	* tests/stack-fcall-*.c: ... new files.
+	* tests/Makefile.am (stack_fcall_SOURCES): Add stack-fcall-*.c.
+
+2014-06-13  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: enhance -k test.
+	Add two more function calls to the stack.  Suggested by Masatake YAMATO.
+
+	* tests/stack-fcall.c (f1): Rename to f3.
+	(f1, f2): New functions.
+	* tests/strace-k.test: Update.
+
+	unwind: ignore memory mappings that have no PROT_EXEC bit set.
+	* unwind.c (build_mmap_cache): For each memory mapping being scanned,
+	save its PROT_EXEC bit and skip the mapping if it is not set.
+
+	unwind: cleanup build_mmap_cache.
+	* unwind.c (build_mmap_cache): Move local variables to the code branch
+	where they are used.  Check return code of sscanf and strdup.  Do not
+	treat unusual memory mappings as fatal errors.  Do not skip memory
+	mappings with path names starting with "[".
+
+	unwind: remove unused field from mmap_cache_t.
+	* unwind.c (mmap_cache_t): Remove "deleted" field.
+	(build_mmap_cache): Remove initialization of "deleted" field.
+
+2014-06-12  Dmitry V. Levin  <ldv@altlinux.org>
+
+	unwind: refactor stacktrace_walk.
+	* unwind.c (stacktrace_walk): Move stack frame printing code
+	to separate function print_stack_frame.
+
+	unwind: constify binary_filename and symbol_name functions arguments.
+	* unwind.c (call_action_fn, print_call_cb, sprint_call_or_error,
+	queue_put, queue_put_call): Add const qualifier to binary_filename and
+	symbol_name arguments.
+
+2014-06-11  Luca Clementi  <luca.clementi@gmail.com>
+
+	unwind: disable stack trace with multiple personalities.
+	* unwind.c (unwind_cache_invalidate, unwind_print_stacktrace,
+	unwind_capture_stacktrace): Disable stack tracing of non-default
+	personality processes.
+
+2014-06-05  Dmitry V. Levin  <ldv@altlinux.org>
+
+	unwind: rename function_off_set to function_offset.
+	* unwind.c (call_action_fn, stacktrace_walk, STACK_ENTRY_SYMBOL_FMT,
+	print_call_cb, sprint_call_or_error, queue_put, queue_put_call):
+	Rename function_off_set to function_offset.
+
+	unwind: fix a bug in range updating of binary search.
+	* unwind.c (print_stacktrace): Fix another off-by-one error in binary search.
+
+	unwind: use fopen64 instead of fopen.
+	* unwind.c (fopen_for_input): Define to fopen64 iff
+	[_LARGEFILE64_SOURCE && HAVE_FOPEN64], otherwise define it to fopen.
+	(build_mmap_cache): Use fopen_for_input instead of fopen.
+
+	unwind: fix build on 32-bit architectures.
+	Fix compilation warnings in unwind.c on 32-bit architectures.
+	On some architectures getuid is actually getuid32, so change the test
+	to use getpid instead of getuid.
+
+	* unwind.c (STACK_ENTRY_SYMBOL_FMT): Explicitly cast function_off_set
+	to unsigned long.
+	(queue_put_error): Change the 3rd argument's type to unsigned long.
+	* tests/stack-fcall.c (f1): Use getpid instead of getuid.
+	* tests/strace-k.test: Likewise.
+
+	tests: robustify -w option test.
+	* tests/count.test: Allow nanosleep to spend a bit less time than 1 second.
+
+2014-06-04  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Fix delete_module decoding.
+	* xlat/delete_module_flags.in: New file.
+	* file.c (sys_delete_module): Move ...
+	* bjm.c (sys_delete_module): ... to here.
+	Decode 1st argument using printstr instead of printpath.
+	* NEWS: Mention it.
+
+2014-06-04  Zubin Mithra  <zubin.mithra@gmail.com>
+
+	Decode paths associated with file descriptors returned by syscalls.
+	* defs.h (RVAL_FD): New macro.
+	(RVAL_MASK, RVAL_STR, RVAL_NONE): Update.
+	* desc.c (sys_dup, sys_delete_module): New functions.
+	(do_dup2, decode_open, sys_creat): Change return value to RVAL_FD.
+	* linux/dummy.h (sys_delete_module, sys_dup): Remove.
+	* linux/syscall.h (sys_delete_module, sys_dup): New prototypes.
+	* syscall.c (trace_syscall_exiting): Handle RVAL_FD.
+
+2014-06-03  Dmitry V. Levin  <ldv@altlinux.org>
+
+	NEWS: Prepare for 4.9 release.
+
+	Warn about flags that have no effect with -c.
+	* strace.c (init): Issue a warning if -i, -k, -r, -t, -T, or -y is used
+	along with -c.
+	This fixes Debian bug #443895.
+
+	debian: enable security hardening features.
+	* debian/rules: Follow the advice in https://wiki.debian.org/Hardening
+	and enable maximum hardening as for programs that handle untrusted data.
+	Patch by Markus <waldeck@gmx.de>.
+
+	debian: update control file.
+	* debian/control (strace64): Fix a typo in package description.
+	Patch by Pascal De Vuyst <pascal.devuyst@gmail.com>.
+	(strace, strace-udeb): Add x32 to architecture list.
+	Patch by Guillaume Morin <guillaume@morinfr.org>.
+	(strace, strace-udeb): Add or1k to architecture list.
+	Patch by Christian Svensson <debian@cmd.nu>.
+	(strace, strace-udeb): Add arm64 to architecture list,
+	and remove defunct arm.
+	Patch by Wookey <wookey@debian.org>.
+
+	This fixes Debian bugs: #697625, #727018, #742235, #749956.
+
+	manpage: minor corrections.
+	$ groff -ww -mandoc -z strace.1
+	strace.1:65: warning: macro `IX' not defined
+
+	* strace.1: define IX macro as empty for groff.
+	Change remaining '-' as minus to '\-'.
+	Have two word spaces after a full stop as an end of sentence.
+	Use extra space ('\,' or '\/') between roman and italic characters.
+	Based on patch by Bjarni Ingi Gislason <bjarniig@rhi.hi.is>.
+	This fixes Debian bug #725987.
+
+2014-05-30  Masatake YAMATO  <yamato@redhat.com>
+
+	unwind: tests: add a test for -k option.
+	* tests/stack-fcall.c: New test target.
+	* tests/strace-k.test: New test driver.
+	* tests/Makefile.am (check_PROGRAMS): Add stack-fcall.
+	(TESTS): Add strace-k.test.
+	* tests/.gitignore: Add stack-fcall.
+
+	unwind: move stacktrace capturing and mmap cache invalidating to trace_syscall_entering
+	Instead of handling stacktrace capturing and mmap cache invalidating in
+	sys_* functions, handle them uniformly in trace_syscall_entering using
+	new flags introduced by previous two commits.
+
+	The patch is simpler than its older version(v3).  The value of
+	hide_log_until_execve is just ignored.  I found the value is nothing
+	to do with this patch.  unwind_cache_invalidate is mentioned only
+	once in trace_syscall_exiting.
+	Both are suggested by Dmitry Levin.
+
+2014-05-30  Dmitry V. Levin  <ldv@altlinux.org>
+
+	unwind: add SE and SI flags to syscall entries for all architectures.
+	Add SE flag to execve, exit, and exit_group syscall entries.
+	Add SI flag to brk, execve, mmap, mprotect, mremap, munmap,
+	remap_file_pages, shmat, and shmdt syscall entries.
+
+2014-05-30  Masatake YAMATO  <yamato@redhat.com>
+
+	unwind: introduce markers specifying the needs of special care in unwinding
+	Some system calls require capturing the stack trace before they are
+	processed in kernel.  Typical one is execve.  Some system calls require
+	invalidating mmap cache after they are processed in kernel.
+
+	In current implementation these requirements are handled directly by
+	appropriate syscall handlers.  However, it is difficult to keep the
+	source code maintainable using this approach to cover all system calls
+	which have such requirements.
+
+	A more generic way to implement this is to flag all syscalls that
+	require special processing, and handle these flags right in
+	trace_syscall_entering instead of changing syscall handlers.
+
+	This patch just defines new flags: STACKTRACE_INVALIDATE_CACHE and
+	STACKTRACE_CAPTURE_ON_ENTER.
+
+	The names of macros are suggested by Dmitry Levin.
+
+	unwind: enable dwarf cache of libunwind.
+	Here is the benchmark of the dwarf cache.
+
+	Target program:
+
+	    #include <sched.h>
+	    int main(void)
+	    {
+	      unsigned int max = 0x6fff, i;
+	      for (i = 0; i < max; i++)
+		sched_yield();
+	      return 0;
+	    }
+
+	Command line:
+
+		./strace -o /dev/null -k a.out
+
+	With the dwarf cache:
+
+	    real	0m12.081s
+	    user	0m3.858s
+	    sys 	0m8.194s
+
+	Without the dwarf cache:
+
+	    real	0m22.326s
+	    user	0m5.218s
+	    sys		0m16.952s
+
+	unwind: report expected backtracing error.
+	When a file mmap'ed to the target process is unlink'ed, backtracing the
+	stack would fail.  Current implementation reports it as
+	"backtracing_error".  To avoid confusion, the message is changed to
+	"expected_backtracing_error".
+
+	Here is the reproducer:
+
+	  $ cat ./p-deleted.c
+	  #include <unistd.h>
+
+	  int main(int argc, char **argv) {
+	    return unlink(argv[0]) < 0;
+	  }
+
+	  $ strace -e unlink -k ./p-deleted
+	  unlink("./p-deleted")                   = 0
+	   > /usr/lib64/libc-2.18.so(unlink+0x7) [0xe7f17]
+	   > /home/yamato/var/strace/t_unwind/p-deleted (deleted)(+0x0) [0x575]
+	   > /usr/lib64/libc-2.18.so(__libc_start_main+0xf5) [0x21d65]
+	   > backtracing_error [0x7ffff1365590]
+	  +++ exited with 0 +++
+
+	p-deleted is deleted therefore backtracing_error is reported.  This
+	patch records the deleted marker when making mmap cache and refers the
+	recorded information in the case "backtracing_error" to switch the
+	message.
+
+	Here is the output of this patch:
+
+	  $ strace -e unlink -k ./p-deleted
+	  unlink("./p-deleted")                   = 0
+	   > /usr/lib64/libc-2.18.so(unlink+0x7) [0xe7f17]
+	   > /home/yamato/var/strace/t_unwind/p-deleted (deleted)(+0x0) [0x575]
+	   > /usr/lib64/libc-2.18.so(__libc_start_main+0xf5) [0x21d65]
+	   > expected_backtracing_error [0x7ffff1365590]
+	  +++ exited with 0 +++
+
+	This solution is not perfect: if a file is unlink'ed after making the
+	mmap cache and before unwinding, strace cannot have a chance to record
+	the deleted marker.
+
+	In this version of patch, hardcoded magic number used in comparing "(delete)"
+	string is replaced with strlen as suggested by Dmitry Levin.
+
+	In old version of patch, the deleted entry was thrown away from mmap
+	cache to avoid to report "backtracing_error".  In this patch I keep it,
+	and just switch the error message.
+	Inspired by the review comment from Dmitry Levin.
+
+	unwind: call unwind_tcb_fin before printing detached message.
+	captured stacktrace is printed in unwind_tcb_fin if tcp->queue is not
+	empty.  This should happen before printing detached message, so
+	unwind_tcb_fin is moved to the top of droptcb.
+
+	This is implicitly suggested by Dmitry Levin in patch review process.
+
+	unwind: implement automatic mmap cache invalidation.
+	A mmap cache belonging to a tcb was updated when a system call which
+	changed the memory mapping was called.  This implementation was assumed
+	the mapping was changed only by the tcb.  However, this assumption is
+	incorrect if the target application is multi-threaded; more than two
+	tcbs can shared the same memory mapping and a tcb can modify it without
+	being noticed by the others.
+
+	This change introduces a global integer variable mmap_cache_generation,
+	and mmap_cache_generation field to struct tcb.  The variable
+	is incremented each time a process enters a syscall that can modify its
+	memory mapping.  Each tcb records the value of this variable at the
+	moment if  building its mmap cache.  Every mmap cache associated with
+	the given tcb can be validated by comparing its mmap_cache_generation
+	field with the variable mmap_cache_generation.
+
+	This implementation is inefficient.  If strace attaches two processes
+	which don't share the memory mapping, rebuilding mmap cache of a tcb
+	triggered by another tcb's mmap system call is not necessary.
+
+	unwind: introduce queue_t for capturing stacktrace.
+	This is the second step for splitting capturing from printing.
+
+	New `queue' field is added to tcb.  Captured stacktrace is stored here.
+	The field is initialized/finalized at unwind_tcb_init/unwind_tcb_fin.
+
+	New API function unwind_capture_stacktrace is added.  This function
+	captures the currest stack using stracktrace_walker and records it in
+	tcb.  It's printing is delayed to the next call of
+	unwind_print_stacktrace.
+
+	unwind_print_stacktrace is extended.  Now it checks queue field of
+	the given tcb at the start of function.  If the function finds a
+	captured stack trace, the latter is printed using stracktrace_walker.
+
+	Currently unwind_capture_stacktrace invocations are added directly to
+	handlers of mmap, munmap, mprotect, and execve.
+
+	Here is the difference of output with/without patch:
+
+	(without patch)
+	  execve("./test-fork", ["./test-fork"], [/* 56 vars */]) = 0
+	   > /usr/lib64/ld-2.18.so(check_one_fd.part.0+0x82) [0x11f0]
+
+	(with patch)
+	  execve("./test-fork", ["./test-fork"], [/* 54 vars */]) = 0
+	   > /usr/lib64/libc-2.18.so(execve+0x7) [0xbcd27]
+	   > /home/yamato/var/strace/strace(exec_or_die+0x10c) [0x26ac]
+	   > /home/yamato/var/strace/strace(startup_child+0x346) [0x134f6]
+	   > /home/yamato/var/strace/strace(init+0x89f) [0x13dff]
+	   > /home/yamato/var/strace/strace(main+0xa) [0x26ca]
+	   > /usr/lib64/libc-2.18.so(__libc_start_main+0xf5) [0x21d65]
+	   > /home/yamato/var/strace/strace(_start+0x29) [0x2799]
+
+	In older version output lines of captured elements were built when
+	printing.  In this version they are built when capturing the stack.
+	As result, unneeded dynamic memory allocations are avoided.
+	Suggested by Luca Clementi.
+
+	In older version the combination of snprintf and realloc were used.
+	In this version they are replaced with asprintf.
+	Suggested by Dmitry Levin.
+
+	unwind: introduce own debug macro.
+	* unwind.c (DPRINTF): New macro, to be utilized in debugging cache
+	management code.
+
+	unwind: introduce stacktrace_walker.
+	In current implementation, the stack trace is captured and printed at
+	the same time, in trace_syscall_exiting.  This approach cannot
+	provide user expected information when a system call changes the
+	memory mapping.  In such cases, the stack trace should be captured on
+	entering syscall and printed on exiting.
+
+	As the initial step for splitting capturing from printing, this change
+	introduces stacktrace_walker utility function.  It can be used both for
+	capturing in trace_syscall_entering and printing in
+	trace_syscall_exiting.
+
+	unwind: give all exported functions "unwind_" prefix.
+	* unwind.c (init_unwind_addr_space): Rename to unwind_init.
+	(init_libunwind_ui): Rename to unwind_tcb_init.
+	(free_libunwind_ui): Rename to unwind_tcb_fin.
+	(delete_mmap_cache): Rename to unwind_cache_invalidate.
+	(print_stacktrace): Rename to unwind_print_stacktrace.
+	* defs.h: Update prototypes.
+	* mem.c: All callers updated.
+	* process.c: Likewise.
+	* strace.c: Likewise.
+	* syscall.c: Likewise.
+
+	unwind: delete mmap cache in free_libunwind_ui.
+	free_libunwind_ui is expected to release all unwind related resources
+	attached to tcp.
+
+	* strace.c (droptcb): Move delete_mmap_cache call ...
+	* unwind.c (free_libunwind_ui): ... to here.
+
+	unwind: make alloc_mmap_cache function local.
+	* defs.h (alloc_mmap_cache): Remove.
+	* unwind.c (alloc_mmap_cache): Add static qualifier.
+
+	unwind: fix a bug in range updating of binary search.
+	* unwind.c (print_stacktrace): Fix off-by-one error in binary search.
+
+2014-05-30  Luca Clementi  <luca.clementi@gmail.com>
+
+	Add -k option to print stack trace after each syscall.
+	Print the stack trace of the traced process after each system call when
+	-k option is specified.  It is implemented using libunwind to unwind the
+	stack and to obtain the function name pointed by the IP.
+
+	Based on the code that was originally taken from strace-plus
+	of Philip J. Guo.
+
+	* configure.ac: Add --with-libunwind option.  Check libunwind support.
+	* Makefile.am: Add libunwind support.
+	* defs.h (struct tcb) [USE_LIBUNWIND]: Append libunwind specific fields.
+	[USE_LIBUNWIND] (stack_trace_enabled, alloc_mmap_cache,
+	delete_mmap_cache, print_stacktrace): New prototypes.
+	* mem.c (print_mmap, sys_munmap, sys_mprotect): Add libunwind support.
+	* process.c (sys_execve): Likewise.
+	* strace.c (usage, alloctcb, droptcb, init): Likewise.
+	* syscall.c (trace_syscall_exiting): Likewise.
+	* unwind.c: New file.
+	* strace.1: Document -k option.
+
+2014-05-30  Dmitry V. Levin  <ldv@altlinux.org>
+
+	sysctl: update CTL_*, KERN_*, NET_*, and VM_* constants.
+	* configure.ac (AC_CHECK_DECLS): Add CTL_*, KERN_*, NET_*, and
+	VM_* constants.
+	* system.c (CTL_PROC, CTL_CPU): Remove definitions.
+	* xlat/sysctl_*.in: Update.
+
+	Check for constants used by waitid function.
+	* configure.ac (AC_CHECK_DECLS): Add P_* constants.
+
+	Check for LO_FLAGS_READ_ONLY constant.
+	* configure.ac (AC_CHECK_DECLS): Add LO_FLAGS_READ_ONLY.
+
+	Compress blank lines.
+	Suppress empty lines left after automated xlat conversion.
+
+	xlat: cleanup the aftermath of automatic conversion.
+
+	Generate xlat/*.in files.
+	Automatically convert xlat structures from *.c files to xlat/*.in files
+	using "./generate_xlat_in.sh *.c" command.
+
+	Rename several xlat structures to avoid collisions.
+	* bjm.c (which): Rename to qm_which.
+	* ipc.c (msg_flags): Rename to ipc_msg_flags.
+	* time.c (which): Rename to itimer_which.
+
+	Enhance xlat generator.
+	* xlat/gen.sh: Define all xlat structs not declared in defs.h as static.
+	Some symbolic constants are not macros, extend #ifdef check to cover
+	symbolic constants checked by AC_CHECK_DECLS.
+	Handle complex symbolic constants in SYMBOL|... form.
+	Handle symbolic constants in 1<<SYMBOL form.
+	Handle numeric constants.
+	Implement #unconditional directive that turns off preprocessor checks.
+	Implement #unterminated directive that turns off adding XLAT_END.
+
+	Use bootstrap script consistently.
+	Now that ./xlat/gen.sh has to be run before autoreconf,
+	replace all autoreconf calls with ./bootstrap call.
+
+	* bootstrap: Forward arguments to autoreconf.
+	* build_static_example.sh: Replace autoreconf call with bootstrap call.
+	* make-dist: Likewise.
+	* qemu_multiarch_testing/README: Likewise.
+
+2014-05-30  Mike Frysinger  <vapier@gentoo.org>
+
+	Implement xlat generator.
+	* bootstrap: New file.
+	* xlat/gen.sh: Likewise.
+	* Makefile.am: Include xlat/Makemodule.am
+	(EXTRA_DIST): Add $(XLAT_INPUT_FILES), $(XLAT_HEADER_FILES), and
+	xlat/gen.sh.
+
+2014-05-30  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: fix SCM_RIGHTS test for big-endian systems.
+	* tests/scm_rights.c (main): Send zero integer to avoid issues with
+	endianness.
+	* tests/scm_rights-fd.test: Update grep patterns.
+
+	Decode file descriptors passed via SCM_RIGHTS control messages.
+	* net.c (printcmsghdr): Print descriptors from SCM_RIGHTS control
+	messages using printfd.
+	* tests/scm_rights.c: New file.
+	* tests/scm_rights-fd.test: New test.
+	* tests/Makefile.am (check_PROGRAMS): Add scm_rights.
+	(TESTS): Add scm_rights-fd.test.
+	* tests/.gitignore: Add scm_rights and uio.
+
+	tests: add a test for -c and -w options.
+	* tests/count.test: New test.
+	* tests/Makefile.am (TESTS): Add it.
+
+2014-05-29  Mark Hills  <Mark.Hills@framestore.com>
+
+	Optionally produce stats on syscall latency.
+	Time spent in system time is not useful where a syscall depends on some
+	non-CPU resource, eg. typically open() or stat() to a network drive.
+
+	This patch adds a new flag (-w) to produce a summary of the time
+	difference between beginning and end of the system call (ie. latency)
+
+	This functionality has been useful to profile slow processes that
+	are not CPU-bound.
+
+2014-05-29  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Constify count_syscall function.
+	* count.c (count_syscall): Add const qualifier to timeval argument and
+	rename it.  Store the wall clock time spent while in syscall in separate
+	timeval variable.
+	* defs.h (count_syscall): Update prototype.
+	* syscall.c (trace_syscall_exiting): Update count_syscall invocation.
+
+	Constify tv_* functions.
+	* defs.h (tv_nz, tv_cmp, tv_float, tv_add, tv_sub, tv_mul, tv_div): Add
+	const qualifier to read only arguments.
+	* util.c (tv_nz, tv_cmp, tv_float, tv_add, tv_sub, tv_mul, tv_div):
+	Likewise.
+
+2014-05-28  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Use printstr for sethostname, setdomainname, and gethostname decoding.
+	The argument passed to sethostname and setdomainname syscalls, as well
+	as the string returned by gethostname syscall, is not a pathname, so
+	printpathn is not the right method for its decoding.
+
+	* process.c (sys_sethostname, sys_setdomainname): Decode 1st argument
+	using printstr instead of printpathn.
+	[ALPHA] (sys_gethostname): Likewise.
+
+2014-05-21  James Hogan  <james.hogan@imgtec.com>
+
+	Fix {get,set}rlimit decoding with unreliable SIZEOF_RLIM_T.
+	When strace is built with large file support definitions in CFLAGS (as
+	may be provided by buildroot) the C library headers may expose a 64-bit
+	rlim_t even though the struct rlimit fields used by the system call
+	interface are only 32-bit.  The SIZEOF_RLIM_T will then be 8 which
+	results in bad decoding of the getrlimit and setrlimit syscalls.
+
+	This is fixed by replacing unreliable SIZEOF_RLIM_T based checks with
+	checks for current_wordsize.
+
+2014-05-13  Masatake YAMATO  <yamato@redhat.com>
+
+	Enhance setns syscall decoding.
+	* process.c (sys_setns): New function.
+	Decode the 2nd syscall argument using clone_flags.
+	* linux/syscall.h (sys_setns): New prototype.
+	* linux/dummy.h (sys_setns): Remove.
+
+2014-05-12  Dmitry V. Levin  <ldv@altlinux.org>
+
+	mips: fix syscall entries that should have TP flag set.
+
+	xtensa: fix unshare syscall entry.
+
+	alpha, hppa, mips n64: fix waitid syscall entry.
+
+	Add TM flag to shmat and shmdt syscall entries.
+
+	Alias sys_vfork to sys_fork.
+	* process.c (sys_vfork): Remove.
+	* linux/syscall.h (sys_vfork): Likewise.
+	* linux/dummy.h (sys_vfork): Alias to sys_fork.
+	* linux/alpha/syscallent.h: Fix vfork entry.
+	* util.c (setbpt): Do not check for sys_vfork.
+	* syscall.c (syscall_fixup_for_fork_exec): Likewise.
+
+2014-04-17  Dmitry V. Levin  <ldv@altlinux.org>
+
+	epoll_ctl: fix EPOLL_CTL_DEL argument decoding.
+	* desc.c (sys_epoll_ctl): Do not parse the event structure for
+	EPOLL_CTL_DEL operation.
+
+	Reported-by: Марк Коренберг <socketpair@gmail.com>
+
+	Update CLOCK_* constants.
+	* time.c (clocknames): Add CLOCK_BOOTTIME, CLOCK_REALTIME_ALARM,
+	CLOCK_BOOTTIME_ALARM, CLOCK_SGI_CYCLE, and CLOCK_TAI.
+	Fixes RH#1088455.
+
+	Fix preadv/pwritev offset decoding.
+	* util.c (printllval): Add align argument.
+	* defs.h (printllval): Update prototype.
+	(printllval_aligned, printllval_unaligned): New macros.
+	* file.c (sys_readahead, sys_truncate64, sys_ftruncate64, sys_fadvise64,
+	sys_fadvise64_64, sys_sync_file_range, sys_sync_file_range2,
+	sys_fallocate): Replace printllval call with printllval_aligned.
+	* io.c (sys_pread, sys_pwrite): Likewise.
+	(sys_preadv, sys_pwritev): Replace printllval call with
+	printllval_unaligned.
+	* linux/arm/syscallent.h: Set the number of preadv and pwritev
+	arguments to 5.
+	* linux/mips/syscallent-o32.h: Likewise.
+	* linux/powerpc/syscallent.h: Likewise.
+	* linux/sh/syscallent.h: Likewise.
+	* linux/xtensa/syscallent.h: Likewise.
+
+	Reported-by: Dima Kogan <dima@secretsauce.net>
+
+2014-04-16  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: add a test for pread/pwrite and preadv/pwritev offset decoding.
+	* tests/uio.c: New file.
+	* tests/uio.test: New test.
+	* tests/Makefile.am (check_PROGRAMS): Add uio.
+	(uio_CFLAGS): Define.
+	(TESTS): Add uio.test.
+
+2014-04-10  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Refactor LDT decoding.
+	* configure.ac (AC_CHECK_TYPES): Remove struct user_desc.
+	* ldt.c: New file.
+	* Makefile.am (strace_SOURCES): Add ldt.c.
+	* mem.c: Do not include <asm/ldt.h>.
+	(print_ldt_entry): Remove.
+	(sys_modify_ldt, sys_set_thread_area, sys_get_thread_area): Move...
+	* ldt.c: ... here.
+	* process.c: Do not include <asm/ldt.h>.
+	(sys_clone) [I386 || X86_64 || X32]: Use print_user_desc.
+
+2014-04-10  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Make int3 example in comments more cut-n-pastable.
+	I found that I use it quite often. Lets make it so that
+	after cut-n-pasting it into a file, there is no need
+	to edit the result (e.g. no need to remove C comment
+	chars from every line.
+
+2014-04-09  Dmitry V. Levin  <ldv@altlinux.org>
+
+	mips: enable decoding of set_thread_area.
+	* linux/dummy.h [MIPS]: Do not redirect sys_set_thread_area to printargs.
+	* mem.c [MIPS] (sys_set_thread_area): Define.
+
+	x86_64, x32: enable decoding of modify_ldt, get_thread_area, and set_thread_area
+	* linux/dummy.h [X86_64 || X32]: Do not redirect sys_modify_ldt,
+	sys_get_thread_area, and sys_set_thread_area to printargs.
+
+	x32: decode clone LDT user_desc entries for x86 processes.
+	* mem.c [X32]: Include asm/ldt.h.
+	[X32] (print_ldt_entry, sys_modify_ldt, sys_set_thread_area,
+	sys_get_thread_area): Define.
+	* process.c [X32]: Include asm/ldt.h.
+	(sys_clone) [X32]: Decode LDT entry if current_personality == 1.
+
+2014-04-09  Elliott Hughes  <enh@google.com>
+
+	x86-64: decode clone LDT user_desc entries for x86 processes.
+	* mem.c [X86_64]: Include asm/ldt.h.
+	[X86_64] (print_ldt_entry, sys_modify_ldt, sys_set_thread_area,
+	sys_get_thread_area): Define.
+	* process.c [X86_64]: Include asm/ldt.h.
+	(sys_clone) [X86_64]: Decode LDT entry if current_personality == 1.
+
+2014-04-09  Dmitry V. Levin  <ldv@altlinux.org>
+
+	x32: fix clone(2) argument order for x86 processes.
+	Apply the same fix that was made for x86_64.
+
+	* process.c [X32] (ARG_CTID, ARG_TLS): Take current
+	personality into account.
+
+2014-04-09  Elliott Hughes  <enh@google.com>
+
+	x86-64: fix clone(2) argument order for x86 processes.
+	Without this patch, strace claims that parent_tidptr == tls, which is
+	clearly wrong.  It is expected that parent_tidptr == child_tidptr.
+
+	* process.c [X86_64] (ARG_CTID, ARG_TLS): Take current
+	personality into account.
+
+2014-04-06  Elliott Hughes  <enh@google.com>
+
+	aarch64: Fix decoding of arm struct stat64.
+	We need to handle this situation more like x86-64.  32-bit arm and i386
+	actually have a common struct stat64, except the arm one must not be
+	packed.  Additionally, on aarch64 the 32-bit personality is personality 0.
+
+2014-03-20  Dmitry V. Levin  <ldv@altlinux.org>
+
+	ARM EABI: disable OABI support by default.
+	OABI is rarely used in ARM EABI systems nowadays, so disable its support
+	by default.  Add --enable-arm-oabi option to enable ARM OABI support.
+
+	* configure.ac: New option --enable-arm-oabi.
+	* syscall.c (get_scno) [ARM]: Check ENABLE_ARM_OABI macro defined by
+	configure instead of undocumented STRACE_KNOWS_ONLY_EABI macro.
+
+2014-03-12  Elliott Hughes  <enh@google.com>
+
+	Fix stat decoding for LP64 bionic.
+	Patch fb642bb6d63f7ffe2228bf48a6008bc8f56f67ff fixed building with
+	HAVE_STAT64 for aarch64 with uapi kernel headers but not x86_64.
+	The workaround needed to be applied to all LP64 architectures, not
+	just aarch64.  This patch fixes that and adds an explanatory comment.
+
+2014-03-11  Masatake YAMATO  <yamato@redhat.com>
+
+	Decode protocol argument for PF_NETLINK sockets.
+	* net.c (protocols): Rename to inet_protocols.
+	[PF_NETLINK] (netlink_protocols): New xlat structure.
+	(sys_socket): Rename protocols to inet_protocols.
+	[PF_NETLINK]: Decode protocol argument using netlink_protocols.
+
+	Acked-by: Mike Frysinger <vapier@gentoo.org>
+
+2014-03-11  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Cleanup socketpair decoding.
+	The only supported domain for socketpair syscall is AF_UNIX, so
+	no decoding related to other domains is required for socketpair.
+
+	* net.c (sys_socketpair): Remove support for PF_INET and PF_IPX domains,
+	print the protocol argument as is.
+
+	printsiginfo: add SIGSYS decoding.
+	* configure.ac (AC_CHECK_MEMBERS): Check for siginfo_t.si_syscall.
+	* signal.c (SYS_SECCOMP): Define if not yet defined.
+	(sigsys_codes): new xlat structure.
+	(printsiginfo): Decode SIGSYS.
+
+	Update siginfo codes.
+	* signal.c (siginfo_codes): Add SI_DETHREAD.
+
+	Factor out printing of si_pid and si_uid members of siginfo_t.
+	* signal.c (printsigsource): New function.
+	(printsiginfo): Use it.
+
+2014-03-10  Elliott Hughes  <enh@google.com>
+
+	Improve SI_TIMER decoding.
+	Decode siginfo_t more clearly for si_code SI_TIMER.
+	The 'pid' is actually a POSIX timer id, and the 'uid' is actually the
+	overrun.
+	Also factor out the si_value dumping so it's the same for every si_code.
+
+2014-03-03  Elliott Hughes  <enh@google.com>
+
+	aarch64: fix decoding of arm syscall numbers.
+	If an aarch64 strace is tracing a process using the arm personality, it
+	also needs to call the shuffle_scno function for the ARM-specific
+	syscalls.
+
+	* syscall.c (shuffle_scno): Define on AARCH64.
+	(get_scno) [AARCH64]: Call shuffle_scno when the tracee is in 32-bit mode.
+
+2014-03-03  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Fix fcntl decoding.
+	Assume that F_SETLK64, F_SETLKW64, and F_GETLK64 are either defined or
+	not defined altogether.
+	Do not assume that sizeof(off_t) < sizeof(long long) when F_SETLK64 is
+	undefined.
+
+	This change fixes build with musl libc on x86.
+
+	* configure.ac: Define SIZEOF_OFF_T.
+	* desc.c (USE_PRINTFLOCK64): New macro.
+	(struct flock64, printflock64): Do not define on X32.
+	(printflock): Replace X32 specific workaround with SIZEOF_OFF_T check.
+	Fix printing off_t members of struct flock.
+	(sys_fcntl): Use USE_PRINTFLOCK64.
+
+2014-03-01  Dmitry V. Levin  <ldv@altlinux.org>
+
+	sys_fcntl: remove F_FREESP and F_FREESP64 support.
+	F_FREESP and F_FREESP64 fcntl commands are not available in Linux
+	and therefore the code implementing their decoding is useless.
+	Besides that, F_FREESP64 decoding is too complicated to support.
+
+	* desc.c (fcntlcmds): Remove F_FREESP and F_FREESP64.
+	Remove F_FREESP64 from the check whether to define struct flock64.
+	(sys_fcntl): Remove F_FREESP and F_FREESP64 support.
+
+2014-02-28  Elliott Hughes  <enh@google.com>
+
+	Add multi-personality support to struct old_sigaction decoding.
+	struct sigaction is another structure that contains members
+	whose size differs between 32-bit and 64-bit personalities.
+
+	* signal.c [HAVE_SIGACTION] (old_sigaction32): New structure.
+	[HAVE_SIGACTION] (decode_old_sigaction): Decode 32-bit struct
+	old_sigaction on a 64-bit host.
+
+	Fix decoding of arm struct stat64 by aarch64 strace.
+	aarch64's uapi header files have a struct stat but no struct stat64.
+	To correctly decode a 32-bit process' s struct stat64 we need
+	HAVE_STAT64, but then the build fails because there is no struct stat64.
+	Luckily, the aarch64 struct stat is structurally equivalent to the arm
+	struct stat64, so we can just reuse that.
+
+	* file.c [AARCH64] (stat64): Define to stat.
+
+2014-02-28  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Remove obsolete ioctlsort.c.
+	The generic version of ioctlsort.c became obsolete after commit
+	v4.6-240-g5afdf12 that removed its last non-Linux users.
+
+	* ioctlsort.c: Remove.
+	* Makefile.am (EXTRA_DIST): Remove ioctlsort.c.
+
+	Reported-by: Elliott Hughes <enh@google.com>
+
+2014-02-27  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Add multi-personality support to stack_t decoding.
+	stack_t is one of many structures that contain members
+	whose size differs between 32-bit and 64-bit personalities.
+
+	* signal.c (print_stack_t): Decode 32-bit stack_t on a 64-bit host.
+
+	Reported-by: Elliott Hughes <enh@google.com>
+
+	Rewrite signal mask decoding without sigset_t.
+	The sigset_t provided by libc is not quite convenient.
+	In glibc, sigset_t is an array with space for 1024 bits, which is much
+	more than required: all architectures supported by Linux have only 64
+	signals except MIPS, which has 128.
+	In bionic libc, LP32 sigset_t is only 4 bytes long, which is less than
+	necessary.
+
+	With this change, signal mask is decoded without use of intermediate
+	sigset_t structure, which saves us some cpu cycles in case of glibc with
+	its inflated sigset_t, and enables build with libcs where sigset_t is
+	broken.
+
+	Old implementation used to check each signal number in the given signal
+	mask twice using sigismember().
+	New implementation is based on popcount and next_set_bit() so it's
+	noticeably faster.
+
+	* configure.ac: Check for __builtin_popcount.
+	* signal.c: Ensure that NSIG >= 32.
+	(sprintsigmask, sprintsigmask_long, printsigmask): Remove.
+	(popcount32, sprintsigmask_n): New functions.
+	(tprintsigmask_addr, sprintsigmask_val, tprintsigmask_val): New macros.
+	(print_sigset_addr_len, sys_sigsetmask, sys_sigreturn, sys_siggetmask,
+	sys_sigsuspend, sys_sigprocmask, decode_new_sigaction): Update to use
+	new signal mask decoding interface.
+	* tests/sigaction.c (main): Add a test with almost filled signal mask.
+	* tests/sigaction.awk: Update.
+
+2014-02-26  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Fix build with Bionic libc.
+	Add generic tests for fopen64 and fputs_unlocked functions to fix build
+	with Bionic libc that does not provide them.
+
+	* configure.ac (AC_CHECK_FUNCS): Add fopen64 and fputs_unlocked.
+	* strace.c [_LARGEFILE64_SOURCE]: Use fopen instead of fopen64
+	if !HAVE_FOPEN64.
+	Use fputs instead of fputs_unlocked if !HAVE_FPUTS_UNLOCKED.
+	* vsprintf.c: Use fputs instead of fputs_unlocked
+	if !HAVE_FPUTS_UNLOCKED.
+
+	Reported-by: Elliott Hughes <enh@google.com>
+
+2014-02-25  James Yang  <james.yang@freescale.com>
+
+	powerpc64: fix 64-bit process detection on embedded.
+	* syscall.c (get_scno) [POWERPC64]: Fix 64-bit process detection
+	on embedded powerpc.
+
+2014-02-25  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Do not compile scsi ioctl decoding if <scsi/sg.h> is not available.
+	Add a generic test for <scsi/sg.h> availability to fix build with
+	Bionic libc that does not provide <scsi/sg.h>.
+
+	* configure.ac (AC_CHECK_HEADERS): Add scsi/sg.h.
+	* ioctl.c (ioctl_decode): Do not call scsi_ioctl if !HAVE_SCSI_SG_H.
+	* scsi.c: Do not compile scsi ioctl decoding if !HAVE_SCSI_SG_H.
+
+	Reported-by: Elliott Hughes <enh@google.com>
+
+2014-02-14  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Revert "Add support for Altera's Nios-II softcore architecture"
+	The patch originally submitted by Ezequiel García was OK, but I somehow
+	managed to mangle it so that most of the patch was not applied.
+
+	According to Ezequiel García, an architecture port based on the generic
+	syscall ABI is in progress.
+
+	This reverts commit 61e426e87ac81be4b4ff9de581635b4ea585624f.
+
+2014-02-08  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: tighten sigaction check.
+	* tests/sigaction.awk: Check that input conatins all expected lines.
+
+	Fix sigaction reporting on non-x86 architectures.
+	If SA_RESTORER is not defined by libc headers but defined by kernel
+	headers, use the definition provided by kernel headers for proper
+	sigaction decoding.
+
+	* signal.c [!SA_RESTORER]: Define to ASM_SA_RESTORER if the latter is
+	defined, regardless of architecure.
+
+	Check for SA_RESTORER definition in <asm/signal.h>
+	Kernel header <asm/signal.h> cannot be included from regular code
+	because it conflicts with libc headers, but SA_RESTORER is needed in
+	signal.c, so SA_RESTORER value is forwarded from <asm/signal.h> to
+	config.h using a configure check.
+
+	* configure.ac (ASM_SA_RESTORER): Define if SA_RESTORER is defined
+	in <asm/signal.h>.
+
+2014-02-07  Dmitry V. Levin  <ldv@altlinux.org>
+
+	arm: fix compilation warning.
+	Fix "dereferencing type-punned pointer will break strict-aliasing rules"
+	warning introduced by commit v4.8-54-g670b21b.
+
+	* signal.c (sys_sigreturn) [ARM]: Avoid dereferencing type-punned pointers.
+
+2014-02-06  Dmitry V. Levin  <ldv@altlinux.org>
+
+	kexec: fix typo.
+	* kexec.c (print_kexec_segments) [SUPPORTED_PERSONALITIES == 1]: Fix typo.
+
+2014-02-06  Ezequiel Garcia  <ezequiel@vanguardiasur.com.ar>
+
+	Add support for Altera's Nios-II softcore architecture.
+	This commit adds strace support for Altera's Nios-II official
+	kernel port as found in git://git.rocketboards.org/linux-socfpga.git
+
+	Notice that this an out-of-tree kernel architectural port, and uses the
+	legacy (non-generic) system call ABI. In particular, the port doesn't
+	support PTRACE_GETREGSET, so the implementation is based on PTRACE_GETREGS.
+
+	Given it's mandatory for new architectures to support the generic
+	syscall ABI and PTRACE_GETREGSET, if the nios2 architecure is ever
+	mainlined, the strace support will have to be re-factored accordingly.
+
+	* linux/nios2/ioctlent.h.in: New file.
+	* linux/nios2/syscallent.h: Likewise.
+	* Makefile.am (EXTRA_DIST): Add linux/nios2/ioctlent.h.in and
+	linux/nios2/syscallent.h.
+	* configure.ac: Add NIOS2 to the list of supported architectures.
+	* defs.h [NIOS2]: Use register reading system.
+	* process.c (struct_user_offsets): Add NIOS2 support.
+	* syscall.c (get_regs, get_scno, get_syscall_args,
+	get_syscall_result, get_error): Likewise.
+	* util.c (change_syscall): Likewise.
+	* mem.c (sys_getpagesize): Define on NIOS2.
+	* system.c [NIOS2] (sys_cacheflush, sys_nios2cmpxchg): New functions.
+
+	Acked-by: Mike Frysinger <vapier@gentoo.org>
+
+2014-02-05  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Implement add_key, keyctl, and request_key decoding.
+	* keyctl.c: New file.
+	* linux/keyctl.h: Likewise.
+	* Makefile.am (strace_SOURCES): Add keyctl.c.
+	(EXTRA_DIST): Add linux/keyctl.h.
+	* linux/dummy.h (sys_add_key, sys_keyctl, sys_request_key): Remove.
+	* linux/syscall.h (sys_add_key, sys_keyctl, sys_request_key): New
+	prototypes.
+
+	Implement ioprio_get and ioprio_set decoding.
+	* ioprio.c: New file.
+	* Makefile.am (strace_SOURCES): Add ioprio.c.
+	* linux/dummy.h (sys_ioprio_get, sys_ioprio_set): Remove.
+	* linux/syscall.h (sys_ioprio_get, sys_ioprio_set): New prototypes.
+
+	Implement finit_module decoding.
+	* bjm.c (module_init_flags): New xlat structure.
+	(sys_finit_module): New function.
+	* linux/dummy.h (sys_finit_module): Remove.
+	* linux/syscall.h (sys_finit_module): New prototype.
+
+	Cleanup inotify syscalls decoding.
+	* linux/inotify.h: New file.
+	* file.c (inotify_modes, inotify_init_flags, sys_inotify_add_watch,
+	sys_inotify_rm_watch, sys_inotify_init1): Move...
+	* inotify.c: ... here.
+	(inotify_modes): Rename to inotify_flags, convert to XLAT form.
+	(inotify_init_flags): Convert to XLAT form.
+	* Makefile.am (strace_SOURCES): Add inotify.c.
+	(EXTRA_DIST): Add linux/inotify.h.
+
+	Enhance reboot decoding.
+	* linux/reboot.h: New file.
+	* system.c (bootflags1, bootflags2, bootflags3, sys_reboot): Move...
+	* reboot.c: ... here.
+	(bootflags2, bootflags3): Update constants.
+	* Makefile.am (strace_SOURCES): Add reboot.c.
+	(EXTRA_DIST): Add linux/reboot.h.
+
+	Implement kexec_load decoding.
+	* kexec.c: New file.
+	* linux/kexec.h: Likewise.
+	* Makefile.am (strace_SOURCES): Add kexec.c.
+	(EXTRA_DIST): Add linux/kexec.h.
+	* linux/dummy.h (sys_kexec_load): Remove.
+	* linux/syscall.h (sys_kexec_load): New prototype.
+
+	Use prepared editions of recently imported linux headers.
+	* linux/fanotify.h: Replace with edition prepared with headers_install.sh.
+	* linux/personality.h: Likewise.
+
+	Implement fanotify_init and fanotify_mark decoding.
+	* fanotify.c: New file.
+	* linux/fanotify.h: Likewise.
+	* Makefile.am (strace_SOURCES): Add fanotify.c.
+	(EXTRA_DIST): Add linux/fanotify.h.
+	* defs.h (print_dirfd): New prototype.
+	* file.c (print_dirfd): Export.
+	* linux/dummy.h (sys_fanotify_init, sys_fanotify_mark): Remove.
+	* linux/syscall.h (sys_fanotify_init, sys_fanotify_mark): New
+	prototypes.
+	* pathtrace.c (pathtrace_match): Handle sys_fanotify_init and
+	sys_fanotify_mark.
+
+	Use XLAT_END macro.
+	Automatically update all xlat structures using the following sed regexp:
+	s/^[[:space:]]*{[[:space:]]*0[[:space:]]*,[[:space:]]*NULL[[:space:]]*,\?[[:space:]]*}[[:space:]]*,\?[[:space:]]*/\tXLAT_END/
+
+	Itroduce XLAT_END macro to make xlat structures more compact.
+	* defs.h (XLAT_END): New macro.
+
+	Convert personality_options to XLAT form.
+	* linux/personality.h: New file.
+	* Makefile.am (EXTRA_DIST): Add it.
+	* system.c: Include <linux/personality.h>.
+	(personality_options): Update PER_* constants, convert to XLAT form.
+
+	Convert futexops to XLAT form.
+	* process.c: Define FUTEX_*_PRIVATE macros.
+	(futexops): Convert to XLAT form.
+
+	Convert sigev_value to XLAT form.
+	* time.c (sigev_value): Convert to XLAT form.
+	(printsigevent32, printsigevent): Update use of sigev_value.
+
+	Use XLAT macro.
+	Automatically convert all xlat structures to XLAT form
+	using the following sed regexp:
+	s/^[[:space:]]*{[[:space:]]*\([^",}[:space:]]\+\)[[:space:]]*,[[:space:]]*"\1",\?[[:space:]]*}[[:space:]]*/\tXLAT(\1)/
+
+	Introduce XLAT macro to ease maintenance of xlat structures.
+	* defs.h (XLAT): New macro.
+
+	Suggested-by: Mike Frysinger <vapier@gentoo.org>
+
+2014-02-04  Stefan Sørensen  <stefan.sorensen@spectralink.com>
+
+	Decode ptp ioctls.
+	* defs.h (ptp_ioctl): New prototype.
+	* ioctl.c (ioctl_decode): Call ptp_ioctl when code is '='.
+	* Makefile.am (strace_SOURCES): Add ptp.c.
+	(EXTRA_DIST): Add linux/ptp_clock.h.
+	* ptp.c: New file.
+	* linux/ptp_clock.h: New file.
+
+2014-02-03  Stefan Sørensen  <stefan.sorensen@spectralink.com>
+
+	Decode dynamic posix clocks.
+	* time.c (cpuclocknames): New xlat structure.
+	(printclockname): New function that decodes posix clock names,
+	including dynamic fd encoded clocks.
+	(sys_clock_settime, sys_clock_gettime, sys_clock_nanosleep,
+	sys_clock_adjtime, sys_timer_create, sys_timerfd, sys_timerfd_create):
+	Use it.
+
+	Update ADJ_* constants.
+	* time.c (adjtimex_modes): Add ADJ_TAI, ADJ_SETOFFSET, ADJ_MICRO,
+	ADJ_NANO, ADJ_OFFSET_SS_READ.
+
+2014-02-02  Philippe Ombredanne  <pombredanne@nexb.com>
+
+	Add decoding of sockets descriptor 'paths' for network calls.
+	* net.c (sys_bind, sys_listen, do_accept, sys_send, sys_sendto,
+	sys_sendmsg, sys_sendmmsg, sys_recv, sys_recvfrom, sys_recvmsg,
+	sys_recvmmsg, sys_shutdown, sys_getsockopt, sys_setsockopt): Decode
+	socket descriptor arguments using printfd.
+	* pathtrace.c (pathtrace_match): Also check TRACE_NETWORK syscalls
+	that take socket descriptor arguments.
+	* tests/net-fd.test: New test for socket descriptor arguments decoding.
+	* tests/Makefile.am (TESTS): Add net-fd.test.
+	(net-fd.log): New dependency on net.log.
+
+2014-02-02  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: rename all tests so that their names end in .test suffix.
+	Due to automake limitations, some features work only for tests
+	that end in one of the suffixes listed in TEST_EXTENSIONS.
+
+	* tests/detach-running: Rename to detach-running.test.
+	* tests/detach-sleeping: Rename to detach-sleeping.test.
+	* tests/detach-stopped: Rename to detach-stopped.test.
+	* tests/net: Rename to net.test.
+	* tests/ptrace_setoptions: Rename to ptrace_setoptions.test.
+	* tests/qual_syscall: Rename to qual_syscall.test.
+	* tests/sigaction.sh: Rename to sigaction.test.
+	* tests/stat: Rename to stat.test.
+	* tests/strace-f: Rename to strace-f.test.
+	* tests/Makefile.am (TESTS): Update.
+	(LOG_COMPILER): Rename to TEST_LOG_COMPILER.
+
+2014-01-31  Mike Frysinger  <vapier@gentoo.org>
+
+	net: add more sockopt options.
+	This syncs with the defines as available in linux-3.13.
+
+	* net.c (sockipoptions): Add IP_IPSEC_POLICY, IP_XFRM_POLICY,
+	IP_PASSSEC, IP_TRANSPARENT, IP_ORIGDSTADDR, IP_RECVORIGDSTADDR,
+	IP_MINTTL, IP_NODEFRAG, IP_UNBLOCK_SOURCE, IP_BLOCK_SOURCE,
+	IP_ADD_SOURCE_MEMBERSHIP, IP_DROP_SOURCE_MEMBERSHIP, MCAST_JOIN_GROUP,
+	MCAST_BLOCK_SOURCE, MCAST_UNBLOCK_SOURCE, MCAST_LEAVE_GROUP,
+	MCAST_JOIN_SOURCE_GROUP, MCAST_LEAVE_SOURCE_GROUP, IP_MULTICAST_ALL,
+	IP_UNICAST_IF.
+
+2014-01-08  Chris Dearman  <chris.dearman@imgtec.com>
+
+	mips: fix sigaction reporting.
+	MIPS userland uses the same sigaction structure with a full signal
+	mask for old_sigaction and new_sigaction and does does not have
+	an sa_restorer field.
+
+	These changes have been tested on MIPS O32 big/little endian, MIPS N64
+	big endian and x86-64.
+
+	* signal.c (old_sigaction) [MIPS]: Add definition for MIPS.
+	(decode_old_sigaction) [MIPS]: Print sa_mask according to its definition.
+	(new_sigaction) [MIPS]: Add definition for MIPS.
+
+2014-01-08  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Factor out struct sigaction printing code.
+	* signal.c [HAVE_SIGACTION] (decode_old_sigaction): New function.
+	[HAVE_SIGACTION] (sys_sigaction): Use it.
+	(decode_new_sigaction): New function.
+	(sys_rt_sigaction): Use it.
+
+	tests: add a test for rt_sigaction output.
+	Since "struct sigaction" varies between architectures, rt_sigaction
+	decoding sometimes produces incorrect output.  This test is expected
+	to catch basic rt_sigaction decoding bugs.
+
+	Based on a patch proposed by Chris Dearman.
+
+	* tests/sigaction.c: New file.
+	* tests/sigaction.awk: Likewise.
+	* tests/sigaction.sh: New test.
+	* tests/Makefile.am (check_PROGRAMS): Add sigaction.
+	(TESTS): Add sigaction.sh.
+	(EXTRA_DIST): Add sigaction.awk.
+	* tests/.gitignore: Add sigaction.
+
+2014-01-05  Kirill A. Shutemov  <kirill.shutemov@linux.intel.com>
+
+	mem: add missed MAP_HUGETLB mmap flag.
+	* mem.c (mmap_flags): Add MAP_HUGETLB mmap flag.
+
+	Acked-by: Mike Frysinger <vapier@gentoo.org>
+
+2013-12-31  Mike Frysinger  <vapier@gentoo.org>
+
+	Delete old PTRACE_{PEEK,POKE}USR logic.
+	The code base has settled on PTRACE_{PEEK,POKE}USER (with an E) and has
+	logic in defs.h to make sure it's set sanely.  Delete this old logic as
+	the defs.h takes care of it now.
+
+	* process.c: Delete PTRACE_PEEKUSR/PTRACE_POKEUSR defines.
+	* signal.c: Likewise.
+	* syscall.c: Delete PTRACE_PEEKUSR define.
+	* util.c: Likewise.
+
+	Decode the O_PATH flag.
+	* file.c (open_mode_flags): Add O_PATH.
+
+2013-11-13  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Remove unused configure checks.
+	* configure.ac (AC_CHECK_FUNCS): Remove _sys_siglist and sys_siglist.
+	(AC_CHECK_DECLS): Likewise.
+
+	Assume that <sys/ptrace.h> provides a valid ptrace prototype.
+	We used to explicitly list architectures where <sys/ptrace.h> from glibc
+	is known to provide a valid prototype for ptrace, and use a homegrown
+	replacement for all the rest.  Situation seems to be better nowadays,
+	glibc is not the only libc available, so let's use ptrace prototype from
+	<sys/ptrace.h> by default, leaving the replacement for rare broken cases
+	if any.
+
+	* defs.h: Use ptrace prototype workaround iff
+	NEED_PTRACE_PROTOTYPE_WORKAROUND is defined.
+
+2013-11-12  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Stop using _LFS64_LARGEFILE.
+	There is only one place left in the code where strace guesses whether
+	libc provides LFS64 functions and structures.  The most natural thing to
+	do there is to check for _LARGEFILE64_SOURCE - the macro provided by
+	glibc.  Other libc implementations that provide nondegenerate LFS64
+	interfaces are expected to define this macro as well.
+
+	* defs.h (_LFS64_LARGEFILE): Remove.
+	* strace.c: Use _LARGEFILE64_SOURCE instead of _LFS64_LARGEFILE.
+
+	Define truncate64, ftruncate64, and getdents64 decoders unconditionally.
+	These decoders are referenced by most architectures, there were no
+	undefined references so far because _LFS64_LARGEFILE appears to be
+	always defined by glibc when _GNU_SOURCE is defined.
+
+	* file.c (sys_truncate64, sys_ftruncate64, sys_getdents64): Define
+	unconditionally.
+
+	Define printflock64 only if it is referenced by other code.
+	* configure.ac (AC_CHECK_TYPES): Add struct flock64.
+	* desc.c (HAVE_F_SETLK64, HAVE_F_SETLKW64, HAVE_F_GETLK64): New macros.
+	[!HAVE_STRUCT_FLOCK64] (struct flock64): Define.
+	(printflock64): Define only if referenced by other code.
+	(sys_fcntl): Handle F_FREESP64, F_SETLK64, F_SETLKW64, and F_GETLK64 iff
+	these constants are defined and differ from their non-64bit versions.
+
+	Make PTRACE_PEEKUSER/PTRACE_POKEUSER checks less glibc specific.
+	* configure.ac (AC_CHECK_DECLS): Add PTRACE_PEEKUSER and
+	PTRACE_POKEUSER.
+	* defs.h: Define PTRACE_PEEKUSER and PTRACE_POKEUSER only if
+	they are not provided by <sys/ptrace.h>.
+
+	Reported by John Spencer.
+
+	Remove unneeded redefinitions of IPPROTO_* macros.
+	IPPROTO_* macros are defined by <netinet/in.h>, no need to redefine
+	them.
+
+	* net.c (IPPROTO_EGP, IPPROTO_PUP, IPPROTO_IDP, IPPROTO_IGMP,
+	IPPROTO_RAW, IPPROTO_MAX): Remove.
+
+	Reported by John Spencer.
+
+	Remove unused AC_OFF_T_IS_LONG_LONG configure check.
+	* configure.ac: Remove AC_OFF_T_IS_LONG_LONG.
+	* m4/long_long.m4: Likewise.
+
+	Remove unused code.
+	* configure.ac (AC_CHECK_TYPES): Remove struct opthdr and
+	struct t_opthdr.
+	* net.c (print_sock_optmgmt): Remove.
+
+	Use struct sigcontext instead of struct sigcontext_struct.
+	* configure.ac (AC_CHECK_TYPES): Remove struct sigcontext_struct.
+	* signal.c (sys_sigreturn) [S390 || S390X || POWERPC || ALPHA): Replace
+	struct sigcontext_struct with struct sigcontext.
+
+	Reported by John Spencer.
+
+	Use standard names of sched_param structure members.
+	* process.c (sys_sched_setscheduler, sys_sched_getparam,
+	sys_sched_setparam): Use portable struct sched_param member name
+	sched_priority instead of glibc specific __sched_priority.
+
+	Reported by John Spencer.
+
+	Make SIGEV_THREAD_ID decoding less glibc specific.
+	SIGEV_THREAD_ID decoding requires access to an internal member of
+	struct sigevent.  There seems to be no portable way to do it besides
+	adding a configure check.
+
+	* configure.ac (AC_CHECK_MEMBERS): Check for
+	struct sigevent._sigev_un._pad and struct sigevent.__pad.
+	* time.c (printsigevent): Use an appropriate struct sigevent member
+	to print thread id.
+
+	Reported by John Spencer.
+
+2013-11-11  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Remove unused configure checks.
+	* configure.ac (AC_CHECK_MEMBERS): Remove T_conn_res.QUEUE_ptr,
+	T_conn_res.ACCEPTOR_id, dqblk.dqb_curblocks, sigcontext.sc_hi2.
+
+	Assume "long long" availability.
+	Most of the code already uses long long types unconditionally.
+
+	* configure.ac: Remove the check for long long.
+	* file.c (printstat64): Remove HAVE_LONG_LONG checks, use %llu format
+	string unconditionally.
+
+	Include <sys/poll.h> only if there is no <poll.h>
+	* pathtrace.c: Do not include <sys/poll.h> if <poll.h> is available.
+	* stream.c: Likewise.
+
+	Move io_* syscalls decoding to a separate file.
+	* desc.c (sys_io_setup, sys_io_destroy, sys_io_submit, sys_io_cancel,
+	sys_io_getevents, declarations from libaio.h): Move to ...
+	* aio.c: new file.
+	* Makefile.am (strace_SOURCES): Add aio.c.
+
+2013-11-11  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Stop using external libaio.h.
+	This change incorporates a partial copy instead
+	of using external libaio.h.
+	Why?
+	Because we want to properly decode 32-bit aio calls
+	by 64-bit strace. For that, we need more definitions than
+	libaio.h provides.
+	(These defs are not done yet, but will eventually be done).
+	Keeping our local 32-bit compat defs in sync with libaio.h
+	_without seeing libaio structs_ is hard/more bug prone.
+	A smaller benefit is that we don't need libaio installed.
+
+	sys_io_submit: simplify iocb_cmd_lookup() helper.
+	This helper returns two values (a string and an enum).
+	The caller prints the string. It's simpler to just print
+	the string in the caller itself. This eliminates
+	"return by reference" and more importantly, an intermediate
+	static string buffer for the string result.
+
+	Since function of the helper is different now,
+	it is renamed to tprint_lio_opcode().
+
+	sys_io_submit: stop traversing iocb vector after first failure.
+	The program may use a very large nr but supply either outright
+	invalid iocbpp[], or one with far fewer elements than nr.
+	We used to try reading iocbpp[i] until i == nr.
+	With this change, we stop on the first failure.
+
+2013-11-09  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Fix pathtrace_match() to match recent fixes to select decoding.
+
+	Fix select decoding on e.g. 32-bit ppc process by 64-bit strace.
+	Added next_set_bit() function which finds the next set bit,
+	properly taking into account word size of the traced process.
+	Use it in decode_select() instead of fd_isset().
+	Also, properly round fdsize up to word size of traced process,
+	not to strace's word size.
+
+2013-11-06  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Speed up and explain fd_isset()
+
+2013-11-05  Dr. David Alan Gilbert  <dave@treblig.org>
+
+	Add a test for the latest select decoding fix.
+	* test/select.c (main): Add a test for nfds larger than FD_SETSIZE.
+
+2013-11-05  Dmitry V. Levin  <ldv@altlinux.org>
+
+	Fix select decoding for glibc in _FORTIFY_SOURCE mode.
+	glibc in _FORTIFY_SOURCE mode raises SIGABRT when descriptor greater
+	or equal to FD_SETSIZE is passed to FD_ISSET.  Select family syscalls,
+	however, can legitimately accept such descriptors.  To overcome this
+	limitation, we have to replace FD_ISSET with an equivalent that imposes
+	no such restrictions.
+
+	* desc.c (fd_isset): New function.
+	(decode_select): Use it instead of FD_ISSET.
+
+	More select decoding fixes.
+	* desc.c (decode_select): Actually print arg[0] as int on entering
+	syscall.  When arg[0] is negative, do not attempt to fetch and decode
+	descriptor sets on entering syscall, kernel will reject it anyway.
+	On exiting syscall, stop checking descriptor sets as soon as all
+	returned descriptors are found.
+
+2013-11-05  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Truncate arg[0] to int in select decoding.
+	This matches kernel's behavior.
+
+	test/select.c: make comment more understandable.
+
+2013-11-05  Dr. David Alan Gilbert  <dave@treblig.org>
+
+	Fix select decoding with bogus (huge or negative) nfds.
+	We used to allocate and fetch bit arrays using a sanitized
+	length, but then iterate over them with "j < arg[0]" condition,
+	where arg[0] is not sanitized. This segfaults if arg[0] is huge
+	or negative. This change fixes this.
+
+	Add test/select.c to capture the case.
+
+2013-09-26  Ali Polatel  <alip@exherbo.org>
+
+	Work around conflict between <sys/ptrace.h> and <linux/ptrace.h>
+	Since glibc-2.18~39 <sys/ptrace.h> defines ptrace_peeksiginfo_args
+	which collides with <linux/ptrace.h>.
+
+	* configure.ac: Check for `struct ptrace_peeksiginfo_args' in
+	<sys/ptrace.h>.
+	* process.c: Work around potential conflict between <sys/ptrace.h>
+	and <linux/ptrace.h> by redefining ptrace_peeksiginfo_args.
+	* signal.c: Likewise.
+	* syscall.c: Likewise.
+	* util.c: Likewise.
+
+2013-09-11  Vineet Gupta  <Vineet.Gupta1@synopsys.com>
+
+	Add support for ARC Cores from Synopsys.
+	Take #2 on mainlining strace support for ARC (last one was 4.6 based back
+	in March 2011), see
+	http://sourceforge.net/p/strace/mailman/message/27210168/
+
+	The syscall ABI is asm-generic/unistd.h based (so no legacy syscalls),
+	hence very similar to metag port.
+
+	test/* all seem to work well.
+
+	* linux/arc/ioctlent.h.in: New file.
+	* linux/arc/syscallent.h: Likewise.
+	* Makefile.am (EXTRA_DIST): Add linux/arc/ioctlent.h.in and
+	linux/arc/syscallent.h.
+	* configure.ac: Add ARC to the list of supported architectures.
+	* defs.h: Add ARC support.
+	* process.c (struct_user_offsets): Likewise.
+	* signal.c (sys_sigreturn): Likewise.
+	* syscall.c (print_pc, get_regset, get_regs, get_scno, get_syscall_args,
+	get_syscall_result, get_error): Likewise.
+	* util.c (change_syscall): Likewise.
+
+	Acked-by: Mike Frysinger <vapier@gentoo.org>
+
+2013-09-11  William Manley  <william.manley@youview.com>
+
+	Add support for decoding sync_file_range.
+	* file.c (sync_file_range_flags): New xlat structure.
+	(sys_sync_file_range, sys_sync_file_range2): New functions.
+	* linux/syscall.h (sys_sync_file_range, sys_sync_file_range2): New
+	prototypes.
+	* linux/dummy.h (sys_sync_file_range, sys_sync_file_range2): Remove.
+	* linux/mips/syscallent-o32.h: Set the number of sync_file_range
+	arguments to 7.
+
+2013-09-11  Mike Frysinger  <vapier@gentoo.org>
+
+	fanotify_mark: fix number of args for 32bit arches.
+	The fanotify_mark func takes a 64bit mask, so 32bit arches have to split
+	it up into two fields.  When the syscall was added, it was listed as only
+	having 5 fields total (since that's correct for 64bit systems).
+
+	* linux/arm/syscallent.h: Set the number of fanotify_mark arguments to 6.
+	* linux/bfin/syscallent.h: Likewise.
+	* linux/hppa/syscallent.h: Likewise.
+	* linux/i386/syscallent.h: Likewise.
+	* linux/m68k/syscallent.h: Likewise.
+	* linux/metag/syscallent.h: Likewise.
+	* linux/microblaze/syscallent.h: Likewise.
+	* linux/mips/syscallent-o32.h: Likewise.
+	* linux/or1k/syscallent.h: Likewise.
+	* linux/powerpc/syscallent.h: Likewise.
+	* linux/s390/syscallent.h: Likewise.
+	* linux/sh/syscallent.h: Likewise.
+	* linux/sparc/syscallent.h: Likewise.
+	* linux/tile/syscallent1.h: Likewise.
+
+	Acked-by: Chris Metcalf <cmetcalf@tilera.com> [for tile]
+
+2013-09-11  Dmitry V. Levin  <ldv@altlinux.org>
+
+	x86, x86_64: fix compilation warnings.
+	Fix "dereferencing type-punned pointer will break strict-aliasing rules"
+	warnings introduced by commit v4.8-52-gb51f364.
+
+	* signal.c (sys_sigreturn): Avoid dereferencing type-punned pointers.
+
+2013-07-18  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Remove rt parameter from [s]printsigmask()
+	In almost all cases, the parameter was 1 ("decode RT sigs too").
+	This change hardwires it to be 1.
+
+	The cases where it was 0 are, and why the change to "decode RT sigs too"
+	is fine:
+
+	IA64: 64-bit arch, all 64 signals fit in one word in any case.
+	S390[x]: sc.oldmask is a sigset_t on kernel side,
+		(sigset_t *)&sc.oldmask[0] does contain all 64 signals.
+	TILE: uc.uc_sigmask is a sigset_t on kernel side,
+		memcpy(&sigm, &uc.uc_sigmask, NSIG / 8) copies all 64 signals.
+
+	Convert some uses of long_to_sigmask+printsigmask to sprintsigmask_long.
+	This allows to drop long_to_sigmask function,
+	and a whole bunch of sigset_t variables.
+
+	Simplify some sigmask manipulations.
+
+	Add compat support for sys_pselect6.
+
+	I386: fix signedness mismatch warning.
+	&i386_regs.esp is a pointer to long, not unsigned long.
+	It needs a cast.
+
+	Fix sigset printing via print_sigset().
+	Replace print_sigset() with print_sigset_addr_len(),
+	which takes not only addr, but also len parameter.
+	This allows us to drop "do we need to print RT signals?" parameter,
+	and this fixes RT signals printing in many syscalls.
+
+	sys_epoll_pwait: print RT signals too, print sigmask size argument.
+
+	sys_sigprocmask: print_sigset -> print_sigset_addr_len(current_wordsize),
+	no change in functionality.
+
+	sys_sigpending: use print_sigset_addr_len(current_wordsize)
+	instead of open-coding it.
+
+	sys_rt_sigprocmask: use print_sigset_addr_len instead of open-coding it.
+	sys_rt_sigpending: ditto.
+	sys_rt_sigsuspend: ditto.
+	sys_rt_sigtimedwait: ditto.
+
+	do_signalfd: print_sigset -> print_sigset_addr_len. This fixes
+	RT signals printing (wasn't showing them before).
+
+	sys_ppoll: ditto.
+
+	copy_sigset_len() is folded into its only user, print_sigset_addr_len(),
+	and copy_sigset() is gone.
+
+	While at it, checked kernel sources and noted where kernel enforces
+	sigset_size == NSIG / 8 (== sizeof(kernel_sigset_t)),
+	and where it allows word-sized sigset_size ([rt_]sigpending).
+
+	sys_rt_sigaction: fix sigset copying.
+	In practice, we always copy as many bytes as syscall param says
+	(8, or 16 on mips). However, malicious program can call sigaction
+	with wrong sigset size. Such syscall will result in EINVAL,
+	but we (strace) end up copying 128 bytes (sizeof(sigset_t)),
+	which copyes some garbage from stack after struct sigaction.
+
+	Now we always copy NSIG / 8 bytes (which is 8 bytes, or 16 on mips).
+
+	ARM: remove wrong NSIG = 32 define.
+	ARM in fact has 64 signals (1..64), and NSIG should be 65
+	(as usual, rememebr that NSIG_libc == NSIG_kernel+1).
+
+	I carefully reviewed all usages of NSIG. In syscall.c,
+	the only usage is:
+	        for (i = 0; i <= NSIG; i++)
+	                if (strcasecmp(s, signame(i) + 3) == 0)...
+	which is safe even if NSIG is way too big - signame(i)
+	returns a well-formed string for any i.
+
+	In signal.c, memcpy(&sigset, &sc.sc_mask, NSIG / 8) is used by
+	IA64 and TILE code, so ARM change can't affect it. And final
+	usage is:
+	 struct new_sigaction::unsigned long sa_mask[NSIG / sizeof(long)];
+	It will grow on ARM (and become correct in the process).
+	Its only use is
+	 memcpy(&sigset, &sa.sa_mask, NSIG / 8);
+	 printsigmask(&sigset, 1);
+	which used to copy garbage in high bits, now it will copy actual data.
+
+2013-07-17  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	ARM: fix sigreturn decoding.
+	Decoding of test/sigreturn testcase:
+	Was:
+	sigreturn() (mask [QUIT TRAP ABRT BUS SEGV USR2 PIPE STKFLT STOP XCPU VTALRM PROF WINCH IO PWR RTMIN]) = 0
+	Now:
+	sigreturn() (mask [CHLD RT_1 RT_3 RT_31 RT_32]) = 0
+
+2013-07-16  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Group USE_CUSTOM_PRINTF define with other tweakables.
+	No code changes.
+
+	Improve sigreturn decoding on x86 to show RT signal bits too.
+	This includes decoding of 32-bit sigreturn by 64-bit strace,
+	which previously wasn't done.
+
+	Added a test for it.
+
+2013-07-12  Anton Blanchard  <anton@samba.org>
+
+	powerpc: enhance 32/64bit detection.
+	We were using uname to determine if userspace was 32 or 64bit.
+	This fails when we have a 64bit kernel and a 32bit userspace.
+
+	* configure.ac (powerpc*): Similar to x86, use a runtime test
+	to determine if we are 32 or 64bit.
+
+	powerpc: fix some compiler warnings.
+	Fix a number of differing signedness warnings when building on
+	powerpc.
+
+	powerpc: fix iflag build issue (static -> extern)
+
+2013-07-10  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	PTRACE_SEIZE can set ptrace options immediately, use this feature.
+	This eliminates some rare bugs, such as post-execve SIGTRAP
+	generation when we attach to a process, and it manages to finish
+	execve'ing before we set TRACEEXEC option to suppress that.
+
+2013-07-08  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	If -o|logger is in use, exit trace loop if nprocs == 0.
+
+	Exit trace loop if got ECHILD, not if nprocs == 0.
+	Comment gives a testcase which wasn't handled correctly
+	by the old code.
+
+2013-07-07  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	s390[x]: get rid of syscall_mode, delete code which never triggers.
+	Before this change, the logic was as follows:
+	syscall entry:
+	  get_scno:
+	    syscall_mode = GPR2
+	    scno = syscall_mode unless syscall_mode == -ENOSYS
+	    (if -ENOSYS, scn is retrieved by decoding current insn)
+	  fixup:
+	    gpr2 = GPR2
+	    syscall_mode = scno unless syscall_mode == -ENOSYS
+	    if (gpr2 != syscall_mode) stray_entry
+	syscall exit:
+	  get_res:
+	    gpr2 = GRP2
+	  fixup:
+	    syscall_mode = scno unless syscall_mode == -ENOSYS
+	    if (WAITEXECVE && gpr2 in (-ENOSYS, scno)) gpr2 = 0;
+	  get_error:
+	    gpr2 is retval
+
+	Entry fixup's if() can never trigger:
+	regardless whether GPR2 is -ENOSYS or not, syscall_mode is always
+	equal to GRP2 value there. So it can be removed.
+
+	On sysexit path, syscall mode is never used.
+
+	Therefore, syscall_mode variable is deleted. grp2 is read from
+	GPR2 register in get_scno, redundant read in entry fixup is removed.
+	As a result, entry fixup's s390 code block vanishes completely.
+
+	gpr2 variable is renamed s390_gpr2 to match the convention used
+	by other arches.
+
+2013-07-04  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	ARM: add STRACE_KNOWS_ONLY_EABI define which can be used to omit OABI support
+
+	Add paranoia check before passing a long to pid2tcb(int pid)
+
+2013-07-02  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	In debug output, show waitpid status with 6 hex digits, not 4.
+	This shows event byte values better (without variable offset):
+
+	 [wait(0x01057f) = 29491] WIFSTOPPED,sig=SIGTRAP,EVENT_FORK (1)
+	 [wait(0x80057f) = 29492] WIFSTOPPED,sig=SIGTRAP,EVENT_STOP (128)
+	         ^^
+
+	Replace suspicious popen_pid assignment with an obviously correct one.
+	popen_pid = vfork() does work correctly, but for a subtle reason
+	that wrong assignment of 0 happens in the child _first_,
+	and _then_ correct value overwrites it in the parent.
+
+	(And in a hyphothetical system where vfork = fork,
+	popen_pid wouldn't be shared, so it will also be ok.)
+
+	However, it's not necessary to be difficult.
+	This change makes it so that assignment is done only in parent.
+
+2013-07-01  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Convert trace() from returning int to returning void.
+	The cleanup sequence in error cases, and on normal code path
+	was nearly the same, no point in duplicating it.
+
+	Remove ia64-specific printing of current address on signal delivery.
+	The address is printed anyway by printleader() if -i is active.
+
+	Rename ia32 to ia64_ia32mode, and make it bool, not long.
+	Grepping for just ia32 was turning up many false positives.
+
+2013-06-30  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Fold is_restart_error() into its sole user.
+
+2013-06-29  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Update qemu_multiarch_testing/README.
+
+2013-06-28  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	sys_clone: add a comment about CLONE_PTRACE and CLONE_UNTRACED.
+	No code changes.
+
+	POWERPC: get rid of "static long ppc_result"
+
+	POWERPC: read ppc_regs.nip if -i.
+
+	POWERPC: if GETREGS fails with EIO, don't try it again.
+
+	Get rid of powerpc_getreg(), it's a copy of upeek()
+
+	Change upeek() to take pid, not full tcp.
+	This will be used by next change.
+
+2013-06-26  Anton Blanchard  <anton@samba.org>
+
+	powerpc: Provide a fallback for old kernels without PTRACE_GETREGS.
+	PTRACE_GETREGS was added to the ppc kernel in 2.6.23. In order to
+	provide backward compatibility for very old kernels, add a manual
+	fallback.
+
+	* syscall.c (powerpc_getreg, powerpc_getregs_old): New functions.
+	(get_regs): Call powerpc_getregs_old if PTRACE_GETREGS is not supported.
+
+	powerpc: Use PTRACE_GETREGS to fetch all registers.
+	* defs.h: declare ppc_regs and get_regs_error.
+	* signal.c (sys_sigreturn): Use ppc_regs instead of upeek.
+	* syscall.c: define ppc_regs.
+	(printcall): Use ppc_regs instead of upeek.
+	(get_scno): Replace multiple upeek calls with one PTRACE_GETREGS call.
+	(get_syscall_result): Likewise.
+
+2013-06-26  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Another manpage tweak.
+
+	Manpage update.
+
+	Update build_static_example.sh.
+	Now it also contains a tested example of i686 build on 64-bit host.
+
+	In -f mode, do not assume that new pid is stopped - handle exits too.
+
+	Set strace_child only in the right branch.
+	"strace_child = pid" assignment was racing in NOMMU case
+	because of vfork (no way to know which process would win).
+
+	After this change, strace_child is set to nonzero only
+	in one process after [v]fork.
+
+	Get rid of TCB_INUSE and TCB_STRACE_CHILD.
+	We can use tcb::pid == 0 as an indicator of free tcb,
+	and we already have strace_child variable which holds
+	pid of our child, if any.
+
+2013-06-21  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Fix debug output of wait4 result (was reusing buf[] on unknown events)
+
+	Show PTRACE_EVENT_STOP correctly in debug output.
+
+	Panic a bit less when we see an unknown pid.
+	I stumbeld over this case when I used "exec stace ...".
+
+	* strace.c (trace): Do not exit if we see an unknown pid in wait4.
+
+	detach(): Reorganize code. Logic is the same.
+	* strace.c (detach): Use goto's instead of excessive nesting.
+	Drop sigstop_expected and interrupt_done variables.
+
+	Eat pending SIGSTOP _before_ PTRACE_DETACH in detach()
+	* strace.c (detach): If TCB_IGNORE_ONE_SIGSTOP is set,
+	di not PTRACE_DETACH - wait for SIGSTOP first.
+
+2013-06-20  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	detach(): warn if we see ECHILD from waitpid.
+	* strace.c (detach): Warn if we see ECHILD from waitpid.
+	Explain in comments that we don't normally expect !WIFSTOPPED
+	either, and also that PTRACE_CONT failure isn't expected
+	(the "break" there is a "I'm confused, bailing out" code style)..
+
+	Improve error messages in detach()
+	* strace.c (detach): Change return type from int to void.
+	Improve error meesages: show PID, tell exactly which operation fails.
+
+	Remove workarounds for ancient kernels lacking __WALL.
+	__WALL is available and working at least since 2.4 kernels: 10 years ago.
+
+	* strace (detach): Remove workarounds for ancient kernels lacking __WALL.
+	Add missing EINTR check.
+	(trace): Remove workarounds for ancient kernels lacking __WALL.
+	Remove redundant double error printout.
+
+	USE_SEIZE: fix detaching from stopped processes.
+	V3: split SEIZE/!SEIZE code paths to reduce confusion.
+	Extensively comment every possible case.
+	Verified that all tests/detach* tests work in both SEIZE and !SEIZE
+	cases.
+
+	* strace.c (detach): If PTRACE_SEIZE API is in use, stop the tracee
+	using PTRACE_INTERRUPT instead of sending it a SIGSTOP.
+	In a subsequent waitpid loop, correctly wait and suppress SIGSTOP
+	on detach if PTRACE_INTERRUPT wasn't used, or wait for any ptrace
+	stop and detach without suppressing signals.
+
+2013-06-19  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: disable /proc based checks when /proc is not mounted.
+	* tests/detach-running: Disable /proc based checks when
+	/proc/self/status is not available.
+	* tests/detach-sleeping: Likewise.
+	* tests/detach-stopped: Likewise.
+
+2013-06-19  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	tests/detach-{running,sleeping,stopped}: check post-detach state.
+	Check that traced process still exists and is in a right state
+	after strace detached from it.
+
+2013-06-19  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: ensure that strace can detach from running processes.
+	* tests/detach-running: New test.
+	* tests/Makefile.am (TESTS): Add it.
+
+	tests: ensure that strace does not leave sleeping processes stopped.
+	* tests/detach-sleeping: Do not send SIGCONT to the sleeping process.
+
+2013-06-18  Dmitry V. Levin  <ldv@altlinux.org>
+
+	tests: fix parallel-tests support in detach-* tests.
+	* tests/detach-sleeping: Use $LOG file for set_ptracer_any output.
+	* tests/detach-stopped: Likewise.
+
+	tests: parametrize "sleep 1"
+	* tests/init.sh (SLEEP_A_BIT): New variable.
+	* tests/detach-sleeping: Use it.
+	* tests/detach-stopped: Likewise.
+
+	tests: ensure that strace can detach from sleeping and stopped processes
+	* tests/set_ptracer_any.c: New file.
+	* tests/detach-sleeping: New test.
+	* tests/detach-stopped: Likewise.
+	* tests/Makefile.am (check_PROGRAMS): Add set_ptracer_any.
+	(TESTS): Add detach-sleeping and detach-stopped.
+	* tests/.gitignore: Add set_ptracer_any.
+
+	tests: enhance timeout checks.
+	Run each test using a wrapper that does all necessary timeout checks.
+
+	* tests/run.sh: New file.
+	* tests/Makefile.am (EXTRA_DIST, LOG_COMPILER): Add it.
+	* tests/init.sh (check_strace, check_timeout): Remove.
+	* tests/detach-stopped: Update callers.
+	* tests/net: Likewise.
+	* tests/ptrace_setoptions: Likewise.
+	* tests/qual_syscall: Likewise.
+	* tests/stat: Likewise.
+	* tests/strace-f: Likewise.
+
+	tests: enable parallel-tests support.
+	* configure.ac (AM_INIT_AUTOMAKE): Add parallel-tests.
+
+	tests: prepare for parallel-tests support.
+	* tests/Makefile.am (CLEANFILES): Calculate dynamically from TESTS.
+	* tests/init.sh (LOG): New variable.
+	* tests/detach-stopped: Use it.
+	* tests/net: Likewise.
+	* tests/qual_syscall: Likewise.
+	* tests/stat: Likewise.
+	* tests/strace-f: Likewise.
+
+2013-06-18  Denys Vlasenko  <dvlasenk@redhat.com>
+
+	Cleanups. No logic changes.
+	* defs.h: Define new ptrace constants unconditionally.
+	* strace.c (detach): Fix comment.
+	(trace): Remove now unnecessary "if USE_SEIZE".
+
+2013-06-05  Dmitry V. Levin  <ldv@altlinux.org>
+
+	maint: post-release administrivia.
+	* NEWS: Add header line for next release.
+
 2013-06-03  Dmitry V. Levin  <ldv@altlinux.org>
 
 	ioctlent: add UAPI support.

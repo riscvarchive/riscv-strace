@@ -32,42 +32,33 @@
 #endif
 
 /* still unfinished */
-#define	sys_add_key		printargs
-#define	sys_fanotify_init	printargs
-#define	sys_fanotify_mark	printargs
-#define	sys_finit_module	printargs
 #define	sys_ioperm		printargs
 #define	sys_iopl		printargs
-#define	sys_ioprio_get		printargs
-#define	sys_ioprio_set		printargs
 #define	sys_kcmp		printargs
-#define	sys_kexec_load		printargs
-#define	sys_keyctl		printargs
 #define	sys_lookup_dcookie	printargs
 #define	sys_name_to_handle_at	printargs
 #define	sys_open_by_handle_at	printargs
-#define	sys_request_key		printargs
-#define	sys_sync_file_range	printargs
-#define	sys_sync_file_range2	printargs
+#define	sys_sched_getattr	printargs
+#define	sys_sched_setattr	printargs
 #define	sys_sysfs		printargs
 #define	sys_vm86old		printargs
 #define	sys_vm86		printargs
 
 /* machine-specific */
-#ifndef I386
-#define	sys_modify_ldt		printargs
-#ifndef M68K
-#define	sys_get_thread_area	printargs
-#define	sys_set_thread_area	printargs
-#endif
+#if !(defined I386 || defined X86_64 || defined X32)
+# define	sys_modify_ldt		printargs
+# ifndef M68K
+#  define	sys_get_thread_area	printargs
+#  ifndef MIPS
+#   define	sys_set_thread_area	printargs
+#  endif
+# endif
 #endif
 
 /* like another call */
 #define	sys_acct		sys_chdir
 #define	sys_chroot		sys_chdir
 #define	sys_clock_getres	sys_clock_gettime
-#define	sys_delete_module	sys_open
-#define	sys_dup			sys_close
 #define	sys_fchdir		sys_close
 #define	sys_fdatasync		sys_close
 #define	sys_fsync		sys_close
@@ -88,7 +79,6 @@
 #define	sys_set_robust_list	sys_munmap
 #define	sys_setfsgid		sys_setfsuid
 #define	sys_setgid		sys_setuid
-#define	sys_setns		sys_inotify_rm_watch
 #define	sys_setregid		sys_setreuid
 #define	sys_setresgid		sys_setresuid
 #define	sys_swapoff		sys_chdir
@@ -97,6 +87,7 @@
 #define	sys_umount		sys_chdir
 #define	sys_unlink		sys_chdir
 #define	sys_uselib		sys_chdir
+#define	sys_vfork		sys_fork
 
 /* printargs does the right thing */
 #define	sys_getpgid		printargs
